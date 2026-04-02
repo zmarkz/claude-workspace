@@ -1,0 +1,30 @@
+# Java / Maven
+portfolio-tracker/target/
+*.class
+*.jar
+*.war
+*.log
+
+# Node
+portfolio-tracker-frontend/node_modules/
+portfolio-tracker-frontend/node_modules 2/
+portfolio-tracker-frontend/dist/
+portfolio-tracker-frontend/src 2/
+portfolio-tracker-frontend/public 2/
+
+# IDE
+.idea/
+*.iml
+.vscode/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+*.env.local
+
+# Maven wrapper
+.mvn/wrapper/maven-wrapper.jar
