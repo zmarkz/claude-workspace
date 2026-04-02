@@ -20,7 +20,7 @@ Use the `keywords` field in each `project.json` to match user requests to the ri
 |---------|------|------|-------|----------|---------|--------|
 | Portfolio Tracker API | `./portfolio-tracker/` | Spring Boot backend | Java 23, Spring Boot 3.2, Maven, JPA/Hibernate | MySQL 8 (`portfolio_tracker`) | 8080 | Active |
 | Portfolio Tracker Frontend | `./portfolio-tracker-frontend/` | React SPA | React 19, TypeScript, Vite, TailwindCSS, Zustand | — | 5173 | Active |
-| MCP Farm | `./mcp-farm/` | Infrastructure platform | Node.js, TypeScript, Fastify, MCP SDK, Drizzle ORM | PostgreSQL 16 (`mcp_farm`) | 9080, 8081, 8082 | Planned |
+| MCP Farm | `./mcp-farm/` | Infrastructure platform | Node.js 18, TypeScript, Fastify v4, MCP SDK, Drizzle ORM, BullMQ | PostgreSQL 15 (`mcp_farm`) | 9080, 8081, 8082 | Active |
 | Platform (Orchestration) | `./platform/` | Docker/Deploy/Scripts | Docker Compose, Nginx, Shell scripts | — | — | Active |
 
 **IMPORTANT**: When you create a new project, you MUST update this table. When you remove a project, remove its row.
