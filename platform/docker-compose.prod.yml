@@ -1,0 +1,72 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: platform_nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+    depends_on:
+      - portfolio-tracker
+      - portfolio-tracker-frontend
+      - mcp-gateway
+      - agent-farm
+    networks:
+      - platform
+
+  portfolio-tracker:
+    build:
+      context: ../portfolio-tracker
+    environment:
+      DB_HOST: ${RDS_MYSQL_HOST}
+      DB_PORT: 3306
+      DB_NAME: portfolio_tracker
+      DB_USER: ${RDS_MYSQL_USER}
+      DB_PASSWORD: ${RDS_MYSQL_PASSWORD}
+      JWT_SECRET: ${JWT_SECRET}
+      FRONTEND_URL: https://${DOMAIN}
+    networks:
+      - platform
+
+  portfolio-tracker-frontend:
+    build:
+      context: ../portfolio-tracker-frontend
+    environment:
+      VITE_API_URL: https://${DOMAIN}/api
+    networks:
+      - platform
+
+  mcp-gateway:
+    build:
+      context: ../mcp-farm
+      dockerfile: packages/gateway/Dockerfile
+    environment:
+      DATABASE_URL: postgres://${RDS_PG_USER}:${RDS_PG_PASSWORD}@${RDS_PG_HOST}:5432/mcp_farm
+    networks:
+      - platform
+
+  agent-farm:
+    build:
+      context: ../mcp-farm
+      dockerfile: packages/agent-farm/Dockerfile
+    environment:
+      DATABASE_URL: postgres://${RDS_PG_USER}:${RDS_PG_PASSWORD}@${RDS_PG_HOST}:5432/mcp_farm
+      MCP_GATEWAY_URL: http://mcp-gateway:8080
+    networks:
+      - platform
+
+  mcp-web-search:
+    build:
+      context: ../mcp-farm
+      dockerfile: packages/mcp-servers/web-search/Dockerfile
+    env_file: .env.prod
+    networks:
+      - platform
+
+networks:
+  platform:
+    driver: bridge

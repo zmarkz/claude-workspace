@@ -1,0 +1,27 @@
+# Environment variables
+.env.local
+.env.prod
+
+# SSH keys
+*.pem
+*.key
+
+# Dependencies
+node_modules/
+
+# Backups
+backups/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS
+.DS_Store
+.vscode/
+.idea/
+
+# Build artifacts
+dist/
+build/

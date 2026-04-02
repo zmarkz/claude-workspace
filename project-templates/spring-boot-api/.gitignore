@@ -1,0 +1,48 @@
+# Maven
+target/
+.mvn/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+dependency-reduced-pom.xml
+
+# IDEs
+.idea/
+.vscode/
+*.iml
+*.iws
+*.ipr
+*.swp
+*.swo
+*~
+.classpath
+.project
+.settings/
+bin/
+
+# OS
+.DS_Store
+Thumbs.db
+*.log
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Build
+out/
+*.class
+*.jar
+*.war
+*.ear
+
+# Node (if frontend bundled)
+node_modules/
+npm-debug.log
+yarn-error.log
+
+# Spring Boot
+spring-app/logs/

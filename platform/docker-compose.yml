@@ -1,0 +1,132 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: platform_mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpass
+      MYSQL_USER: dev
+      MYSQL_PASSWORD: devpass
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./scripts/init-databases.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - platform
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: platform_postgres
+    environment:
+      POSTGRES_USER: dev
+      POSTGRES_PASSWORD: devpass
+      POSTGRES_INITDB_ARGS: "-c shared_preload_libraries=pg_stat_statements"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init-databases-pg.sql:/docker-entrypoint-initdb.d/init.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dev"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    networks:
+      - platform
+
+  redis:
+    image: redis:7-alpine
+    container_name: platform_redis
+    ports:
+      - "6379:6379"
+    networks:
+      - platform
+
+  portfolio-tracker:
+    build:
+      context: ../portfolio-tracker
+    container_name: portfolio_tracker
+    ports:
+      - "8080:8080"
+    environment:
+      DB_HOST: mysql
+      DB_PORT: 3306
+      DB_NAME: portfolio_tracker
+      DB_USER: dev
+      DB_PASSWORD: devpass
+      JWT_SECRET: local-dev-jwt-secret-minimum-32-characters-long
+      FRONTEND_URL: http://localhost:5173
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - platform
+
+  portfolio-tracker-frontend:
+    build:
+      context: ../portfolio-tracker-frontend
+    container_name: portfolio_tracker_frontend
+    ports:
+      - "5173:80"
+    environment:
+      VITE_API_URL: http://portfolio-tracker:8080
+    depends_on:
+      - portfolio-tracker
+    networks:
+      - platform
+
+  mcp-gateway:
+    build:
+      context: ../mcp-farm
+      dockerfile: packages/gateway/Dockerfile
+    container_name: mcp_gateway
+    ports:
+      - "9080:8080"
+    environment:
+      DATABASE_URL: postgres://dev:devpass@postgres:5432/mcp_farm
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - platform
+
+  agent-farm:
+    build:
+      context: ../mcp-farm
+      dockerfile: packages/agent-farm/Dockerfile
+    container_name: agent_farm
+    ports:
+      - "8082:8080"
+    environment:
+      DATABASE_URL: postgres://dev:devpass@postgres:5432/mcp_farm
+      MCP_GATEWAY_URL: http://mcp-gateway:8080
+    depends_on:
+      - mcp-gateway
+    networks:
+      - platform
+
+  mcp-web-search:
+    build:
+      context: ../mcp-farm
+      dockerfile: packages/mcp-servers/web-search/Dockerfile
+    container_name: mcp_web_search
+    expose:
+      - "3001"
+    env_file: .env.local
+    networks:
+      - platform
+
+volumes:
+  mysql_data:
+  postgres_data:
+
+networks:
+  platform:
+    driver: bridge

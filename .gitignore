@@ -6,9 +6,9 @@ portfolio-tracker/target/
 *.log
 
 # Node
-portfolio-tracker-frontend/node_modules/
+**/node_modules/
+**/dist/
 portfolio-tracker-frontend/node_modules 2/
-portfolio-tracker-frontend/dist/
 portfolio-tracker-frontend/src 2/
 portfolio-tracker-frontend/public 2/
 
@@ -17,14 +17,31 @@ portfolio-tracker-frontend/public 2/
 *.iml
 .vscode/
 *.swp
+*.swo
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Environment
+# Environment / Secrets
 .env
 *.env.local
+.env.prod
+*.pem
+*.key
 
 # Maven wrapper
 .mvn/wrapper/maven-wrapper.jar
+
+# Docker
+docker-compose.override.yml
+
+# Project Templates (don't track build artifacts inside templates)
+project-templates/**/node_modules/
+project-templates/**/target/
+project-templates/**/dist/
+
+# Platform
+platform/.env.local
+platform/.env.prod
+platform/backups/

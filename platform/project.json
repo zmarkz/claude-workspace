@@ -1,0 +1,13 @@
+{
+  "name": "platform",
+  "displayName": "Platform Orchestration",
+  "type": "platform",
+  "status": "active",
+  "stack": ["docker", "nginx", "shell"],
+  "port": null,
+  "database": { "type": "none", "name": "" },
+  "docker": { "service": "", "dockerfile": "" },
+  "keywords": ["docker", "compose", "deploy", "aws", "nginx", "infrastructure", "orchestration"],
+  "dependencies": [],
+  "repository": ""
+}

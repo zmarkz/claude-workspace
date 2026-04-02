@@ -1,0 +1,16 @@
+*.md
+.git
+.gitignore
+.env
+.env.local
+.env.*.local
+target/
+.mvn/
+mvnw
+mvnw.cmd
+.idea/
+*.iml
+*.iws
+*.ipr
+.DS_Store
+.vscode/

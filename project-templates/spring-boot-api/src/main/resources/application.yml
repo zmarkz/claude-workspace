@@ -1,0 +1,48 @@
+spring:
+  application:
+    name: {{APP_NAME}}
+
+  datasource:
+    url: jdbc:mysql://${DB_HOST:localhost}:${DB_PORT:3306}/${DB_NAME:{{APP_NAME}}_db}
+    username: ${DB_USER:root}
+    password: ${DB_PASSWORD:password}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+        format_sql: true
+
+  mvc:
+    cors:
+      allowed-origins: ${FRONTEND_URL:http://localhost:3000}
+      allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+      allowed-headers: "*"
+      allow-credentials: true
+
+server:
+  port: 8080
+  servlet:
+    context-path: /
+
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+    operationsSorter: method
+    tagsSorter: alpha
+
+jwt:
+  secret: ${JWT_SECRET:your-secret-key-change-in-production-min-32-chars}
+  expiration: 86400000
+
+logging:
+  level:
+    root: INFO
+    com.{{APP_GROUP}}: DEBUG
