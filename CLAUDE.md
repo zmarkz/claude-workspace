@@ -6,21 +6,43 @@ You are working in a multi-project workspace. This directory contains multiple i
 
 ---
 
+## Directory Layout
+
+```
+~/Documents/claude/
+├── applications/               ← ALL business applications live here
+│   ├── portfolio-tracker/      ← Spring Boot API
+│   ├── portfolio-tracker-frontend/  ← React SPA
+│   └── admin-nexus/            ← MCP Farm admin dashboard
+├── mcp-farm/                   ← MCP gateway + agent farm infrastructure
+├── platform/                   ← Docker Compose, Nginx, deployment scripts
+├── project-templates/          ← Scaffolding templates (not runnable projects)
+└── CLAUDE.md                   ← This file
+```
+
+**Rule**: Every new business application goes into `applications/{app-name}/`. Infrastructure services (MCP farm, etc.) live at the top level. Platform orchestration stays in `platform/`.
+
+---
+
 ## Project Registry
 
 Each project has a `project.json` at its root. To discover all projects dynamically:
 
 ```bash
+# Top-level projects
 for f in ~/Documents/claude/*/project.json; do echo "---"; cat "$f"; done
+# Applications under applications/
+for f in ~/Documents/claude/applications/*/project.json; do echo "---"; cat "$f"; done
 ```
 
 Use the `keywords` field in each `project.json` to match user requests to the right project. Below is the current registry (keep this updated when creating or removing projects):
 
 | Project | Path | Type | Stack | Database | Port(s) | Status |
 |---------|------|------|-------|----------|---------|--------|
-| Portfolio Tracker API | `./portfolio-tracker/` | Spring Boot backend | Java 23, Spring Boot 3.2, Maven, JPA/Hibernate | MySQL 8 (`portfolio_tracker`) | 8080 | Active |
-| Portfolio Tracker Frontend | `./portfolio-tracker-frontend/` | React SPA | React 19, TypeScript, Vite, TailwindCSS, Zustand | — | 5173 | Active |
+| Portfolio Tracker API | `./applications/portfolio-tracker/` | Spring Boot backend | Java 23, Spring Boot 3.2, Maven, JPA/Hibernate | MySQL 8 (`portfolio_tracker`) | 8080 | Active |
+| Portfolio Tracker Frontend | `./applications/portfolio-tracker-frontend/` | React SPA | React 19, TypeScript, Vite, TailwindCSS, Zustand | — | 5173 | Active |
 | MCP Farm | `./mcp-farm/` | Infrastructure platform | Node.js 18, TypeScript, Fastify v4, MCP SDK, Drizzle ORM, BullMQ | PostgreSQL 15 (`mcp_farm`) | 9080, 8081, 8082 | Active |
+| Admin Nexus | `./applications/admin-nexus/` | React SPA | React 19, TypeScript, Vite, TailwindCSS, Zustand, Recharts | — | 5174 | Active |
 | Platform (Orchestration) | `./platform/` | Docker/Deploy/Scripts | Docker Compose, Nginx, Shell scripts | — | — | Active |
 
 **IMPORTANT**: When you create a new project, you MUST update this table. When you remove a project, remove its row.
@@ -32,9 +54,10 @@ Use the `keywords` field in each `project.json` to match user requests to the ri
 When the user asks about something, determine which project it belongs to and work WITHIN that project's directory. Use these rules:
 
 ### Keyword-Based Routing
-- **portfolio, stocks, holdings, trading, investments, kite, zerodha** → `./portfolio-tracker/` or `./portfolio-tracker-frontend/`
-  - If about API, backend, database, entities, services → `./portfolio-tracker/`
-  - If about UI, dashboard, components, pages, charts → `./portfolio-tracker-frontend/`
+- **portfolio, stocks, holdings, trading, investments, kite, zerodha** → `./applications/portfolio-tracker/` or `./applications/portfolio-tracker-frontend/`
+  - If about API, backend, database, entities, services → `./applications/portfolio-tracker/`
+  - If about UI, dashboard, components, pages, charts → `./applications/portfolio-tracker-frontend/`
+- **admin, nexus, monitoring, tool explorer, testing console, queue monitor** → `./applications/admin-nexus/`
 - **MCP, gateway, agent farm, tool routing, MCP server** → `./mcp-farm/`
 - **docker, deploy, compose, nginx, AWS, infrastructure** → `./platform/`
 - **template, scaffold, new app** → See "New App Creation" below
@@ -167,8 +190,8 @@ Before writing any code, clarify:
 
 ### Step 2: Scaffold the Project
 ```bash
-mkdir ~/Documents/claude/{app-name}
-cd ~/Documents/claude/{app-name}
+mkdir ~/Documents/claude/applications/{app-name}
+cd ~/Documents/claude/applications/{app-name}
 git init
 ```
 
@@ -184,10 +207,10 @@ Copy the template contents and adapt:
 - Remove any template-specific placeholder code
 
 ### Step 3: Create project.json
-Create `~/Documents/claude/{app-name}/project.json` following the convention above.
+Create `~/Documents/claude/applications/{app-name}/project.json` following the convention above.
 
 ### Step 4: Create per-project CLAUDE.md
-Create `~/Documents/claude/{app-name}/CLAUDE.md` following the template in the "Per-Project CLAUDE.md" section above. Fill in ALL sections — do not leave placeholders.
+Create `~/Documents/claude/applications/{app-name}/CLAUDE.md` following the template in the "Per-Project CLAUDE.md" section above. Fill in ALL sections — do not leave placeholders.
 
 ### Step 5: Create Dockerfile
 Create a production-ready Dockerfile in the project root. Follow the patterns from existing projects:
@@ -198,7 +221,7 @@ Create a production-ready Dockerfile in the project root. Follow the patterns fr
 
 ### Step 6: Wire into Platform
 Update `~/Documents/claude/platform/docker-compose.yml`:
-- Add the new service
+- Add the new service with `context: ../applications/{app-name}`
 - Set `DATABASE_URL` or equivalent env vars pointing to the shared database
 - Set correct `depends_on` with health checks
 - Expose the correct port
@@ -215,7 +238,7 @@ Update the **Project Registry table** in THIS file with the new project's detail
 
 ### Step 8: Initial Commit
 ```bash
-cd ~/Documents/claude/{app-name}
+cd ~/Documents/claude/applications/{app-name}
 git add .
 git commit -m "feat: initial scaffold for {app-name}"
 ```
@@ -323,6 +346,8 @@ docker compose down -v
 | 9080 | MCP Gateway (REST API, mapped from internal 8080) |
 | 8081 | MCP Gateway (MCP Protocol) |
 | 8082 | Agent Farm |
+| 3004 | Portfolio Tracker MCP Server |
+| 5174 | Admin Nexus |
 
 **Note on port conflicts**: Portfolio Tracker API and MCP Gateway both use 8080 internally. In docker-compose, the MCP Gateway is mapped to host port 9080. Inside the Docker network, services communicate by service name, so there's no conflict.
 
@@ -373,7 +398,7 @@ Use conventional commits:
 ### Working on a Specific Project
 When the user's request maps to a specific project:
 1. Read this root CLAUDE.md (you're doing that now)
-2. Navigate to the project directory
+2. Navigate to the project directory (under `applications/` for business apps)
 3. Read the project's own CLAUDE.md
 4. Read `project.json` for metadata
 5. Do the work within that project's directory
@@ -425,3 +450,4 @@ Templates live in `~/Documents/claude/project-templates/`. They are NOT git repo
 4. **Test in Docker** before considering a feature done. The Docker environment is the source of truth.
 5. **Keep port mappings updated** in the Port Map table above when adding new services.
 6. **Separate repos** — when creating a new project, always `git init` it as its own repo.
+7. **New apps go in `applications/`** — all business applications live under `./applications/{app-name}/`.

@@ -1,6 +1,5 @@
 # Sub-projects (each has its own git repo)
-portfolio-tracker/
-portfolio-tracker-frontend/
+applications/
 platform/
 mcp-farm/
 
