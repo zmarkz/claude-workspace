@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Portfolio Intelligence Platform — Architecture</title>
+<style>
+  :root {
+    --bg: #0f172a; --bg2: #1e293b; --bg3: #334155;
+    --text: #e2e8f0; --text2: #94a3b8; --text3: #64748b;
+    --blue: #3b82f6; --blue2: #1d4ed8; --green: #22c55e; --amber: #f59e0b;
+    --red: #ef4444; --purple: #a855f7; --cyan: #06b6d4;
+    --border: #334155; --code-bg: #1a2332;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Inter', system-ui, sans-serif;
+    background: var(--bg); color: var(--text); line-height: 1.7;
+    -webkit-font-smoothing: antialiased;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 2rem 1.5rem 6rem; }
+
+  /* Header */
+  .hero {
+    text-align: center; padding: 3rem 0 2rem;
+    border-bottom: 1px solid var(--border); margin-bottom: 2.5rem;
+  }
+  .hero h1 { font-size: 2.2rem; font-weight: 700; letter-spacing: -0.02em; }
+  .hero h1 span { color: var(--blue); }
+  .hero .subtitle { color: var(--text2); margin-top: 0.5rem; font-size: 1.05rem; }
+  .hero .meta { color: var(--text3); font-size: 0.85rem; margin-top: 1rem; }
+  .hero .badges { display: flex; gap: 0.5rem; justify-content: center; flex-wrap: wrap; margin-top: 1.2rem; }
+  .badge {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.3rem 0.7rem; border-radius: 9999px; font-size: 0.75rem; font-weight: 600;
+    border: 1px solid var(--border); background: var(--bg2);
+  }
+  .badge.blue { border-color: var(--blue); color: var(--blue); }
+  .badge.green { border-color: var(--green); color: var(--green); }
+  .badge.amber { border-color: var(--amber); color: var(--amber); }
+  .badge.purple { border-color: var(--purple); color: var(--purple); }
+  .badge.cyan { border-color: var(--cyan); color: var(--cyan); }
+
+  /* Nav */
+  .toc {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 12px;
+    padding: 1.5rem 2rem; margin-bottom: 2.5rem;
+  }
+  .toc h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text3); margin-bottom: 1rem; }
+  .toc-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 0.4rem; }
+  .toc a {
+    color: var(--text2); text-decoration: none; font-size: 0.9rem; padding: 0.3rem 0.5rem;
+    border-radius: 6px; transition: all 0.15s;
+  }
+  .toc a:hover { color: var(--blue); background: rgba(59,130,246,0.08); }
+  .toc a .num { color: var(--text3); font-size: 0.8rem; margin-right: 0.3rem; }
+
+  /* Sections */
+  .section { margin-bottom: 3rem; }
+  .section > h2 {
+    font-size: 1.5rem; font-weight: 700; letter-spacing: -0.01em;
+    padding-bottom: 0.75rem; border-bottom: 2px solid var(--blue); margin-bottom: 1.5rem;
+    display: flex; align-items: center; gap: 0.6rem;
+  }
+  .section > h2 .icon { font-size: 1.3rem; }
+  .section > h3 { font-size: 1.1rem; color: var(--text); margin: 1.5rem 0 0.75rem; font-weight: 600; }
+
+  /* Cards */
+  .card {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1.25rem 1.5rem; margin-bottom: 1rem;
+  }
+  .card-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; margin: 1rem 0; }
+  .card h4 { font-size: 0.95rem; font-weight: 600; margin-bottom: 0.4rem; display: flex; align-items: center; gap: 0.4rem; }
+  .card p { color: var(--text2); font-size: 0.88rem; }
+  .card .tag {
+    display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.72rem;
+    font-weight: 600; margin-right: 0.3rem;
+  }
+  .tag-java { background: rgba(239,68,68,0.15); color: var(--red); }
+  .tag-ts { background: rgba(59,130,246,0.15); color: var(--blue); }
+  .tag-react { background: rgba(6,182,212,0.15); color: var(--cyan); }
+
+  /* Tables */
+  .table-wrap { overflow-x: auto; margin: 1rem 0; border-radius: 10px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 0.88rem; }
+  th {
+    background: var(--bg3); text-align: left; padding: 0.65rem 1rem;
+    font-weight: 600; font-size: 0.78rem; text-transform: uppercase;
+    letter-spacing: 0.05em; color: var(--text2); white-space: nowrap;
+  }
+  td { padding: 0.6rem 1rem; border-top: 1px solid var(--border); color: var(--text2); }
+  tr:hover td { background: rgba(59,130,246,0.04); }
+  td code { background: var(--code-bg); padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.82rem; color: var(--cyan); }
+
+  /* Code / Diagram blocks */
+  .diagram-wrap {
+    background: var(--code-bg); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1.25rem 1.5rem; margin: 1rem 0; overflow-x: auto;
+  }
+  .diagram-wrap pre {
+    font-family: 'SF Mono', 'Fira Code', 'JetBrains Mono', monospace;
+    font-size: 0.8rem; line-height: 1.55; color: var(--text2); white-space: pre; margin: 0;
+  }
+  .diagram-title {
+    font-size: 0.78rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text3); margin-bottom: 0.75rem;
+  }
+
+  /* Collapsible */
+  details { margin: 1rem 0; }
+  details summary {
+    cursor: pointer; padding: 0.75rem 1.25rem; background: var(--bg2); border: 1px solid var(--border);
+    border-radius: 8px; font-weight: 600; font-size: 0.95rem; color: var(--text);
+    list-style: none; display: flex; align-items: center; gap: 0.5rem;
+    transition: all 0.15s;
+  }
+  details summary:hover { border-color: var(--blue); }
+  details summary::before { content: '▶'; font-size: 0.7rem; color: var(--text3); transition: transform 0.2s; }
+  details[open] summary::before { transform: rotate(90deg); }
+  details[open] summary { border-radius: 8px 8px 0 0; border-bottom-color: transparent; }
+  details .detail-content {
+    background: var(--bg2); border: 1px solid var(--border); border-top: none;
+    border-radius: 0 0 8px 8px; padding: 1.25rem 1.5rem;
+  }
+
+  /* Stat row */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+  .stat {
+    background: var(--bg2); border: 1px solid var(--border); border-radius: 10px;
+    padding: 1rem 1.25rem; text-align: center;
+  }
+  .stat .val { font-size: 1.8rem; font-weight: 700; color: var(--blue); }
+  .stat .label { font-size: 0.78rem; color: var(--text3); margin-top: 0.2rem; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  /* Flow steps */
+  .flow-steps { display: flex; flex-direction: column; gap: 0; margin: 1rem 0; }
+  .flow-step {
+    display: flex; gap: 1rem; padding: 1rem 1.25rem; background: var(--bg2);
+    border: 1px solid var(--border); position: relative;
+  }
+  .flow-step:first-child { border-radius: 10px 10px 0 0; }
+  .flow-step:last-child { border-radius: 0 0 10px 10px; }
+  .flow-step:not(:last-child) { border-bottom: none; }
+  .flow-step .step-num {
+    width: 28px; height: 28px; background: var(--blue); color: white; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-size: 0.78rem; font-weight: 700;
+    flex-shrink: 0;
+  }
+  .flow-step .step-content h4 { font-size: 0.9rem; font-weight: 600; margin-bottom: 0.2rem; }
+  .flow-step .step-content p { font-size: 0.85rem; color: var(--text2); }
+
+  /* Endpoint groups */
+  .endpoint-group { margin: 1rem 0; }
+  .endpoint-group h4 {
+    font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.06em;
+    color: var(--text3); margin-bottom: 0.5rem; padding: 0.5rem 1rem;
+    background: var(--bg3); border-radius: 6px;
+  }
+  .endpoint {
+    display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 1rem;
+    border-bottom: 1px solid rgba(51,65,85,0.5); font-size: 0.88rem;
+  }
+  .endpoint:last-child { border-bottom: none; }
+  .method {
+    font-family: monospace; font-weight: 700; font-size: 0.72rem; padding: 0.2rem 0.5rem;
+    border-radius: 4px; min-width: 52px; text-align: center;
+  }
+  .method-get { background: rgba(34,197,94,0.15); color: var(--green); }
+  .method-post { background: rgba(59,130,246,0.15); color: var(--blue); }
+  .method-delete { background: rgba(239,68,68,0.15); color: var(--red); }
+  .endpoint .path { font-family: monospace; color: var(--text); font-size: 0.85rem; }
+  .endpoint .desc { color: var(--text3); margin-left: auto; font-size: 0.82rem; }
+
+  /* Print */
+  @media print {
+    body { background: white; color: #1a1a1a; }
+    .card, .diagram-wrap, .toc, details summary, .flow-step, .stat { border-color: #ddd; background: #f8f8f8; }
+    th { background: #eee; }
+  }
+
+  @media (max-width: 768px) {
+    .container { padding: 1rem; }
+    .hero h1 { font-size: 1.6rem; }
+    .card-grid { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .endpoint .desc { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+
+<!-- Hero -->
+<div class="hero">
+  <h1>Portfolio <span>Intelligence</span> Platform</h1>
+  <p class="subtitle">Multi-application distributed system for Indian equity portfolio management with AI-powered analysis</p>
+  <p class="meta">Last updated: April 5, 2026 &middot; Version 2.0</p>
+  <div class="badges">
+    <span class="badge blue">5 Applications</span>
+    <span class="badge green">15 MCP Tools</span>
+    <span class="badge amber">6 Agent Templates</span>
+    <span class="badge purple">30+ API Endpoints</span>
+    <span class="badge cyan">3 Databases</span>
+  </div>
+</div>
+
+<!-- Stats -->
+<div class="stats">
+  <div class="stat"><div class="val">5</div><div class="label">Applications</div></div>
+  <div class="stat"><div class="val">12</div><div class="label">MySQL Tables</div></div>
+  <div class="stat"><div class="val">15</div><div class="label">MCP Tools</div></div>
+  <div class="stat"><div class="val">7</div><div class="label">Auth Layers</div></div>
+  <div class="stat"><div class="val">30+</div><div class="label">API Endpoints</div></div>
+  <div class="stat"><div class="val">2</div><div class="label">Languages</div></div>
+</div>
+
+<!-- TOC -->
+<nav class="toc">
+  <h2>Table of Contents</h2>
+  <div class="toc-grid">
+    <a href="#arch"><span class="num">01</span> High-Level Architecture</a>
+    <a href="#services"><span class="num">02</span> Service Catalog</a>
+    <a href="#auth"><span class="num">03</span> Authentication</a>
+    <a href="#ai-flow"><span class="num">04</span> AI Analysis Flow</a>
+    <a href="#tax-flow"><span class="num">05</span> Tax Calculation</a>
+    <a href="#mcp-flow"><span class="num">06</span> MCP Tool Execution</a>
+    <a href="#database"><span class="num">07</span> Database Schema</a>
+    <a href="#tools"><span class="num">08</span> MCP Tool Registry</a>
+    <a href="#agents"><span class="num">09</span> Agent Templates</a>
+    <a href="#endpoints"><span class="num">10</span> API Endpoints</a>
+    <a href="#frontend"><span class="num">11</span> Frontend Pages</a>
+    <a href="#resilience"><span class="num">12</span> Resilience Patterns</a>
+    <a href="#tech"><span class="num">13</span> Technology Stack</a>
+    <a href="#deploy"><span class="num">14</span> Deployment</a>
+  </div>
+</nav>
+
+<!-- 1. Architecture Diagram -->
+<section class="section" id="arch">
+  <h2><span class="icon">&#9634;</span> High-Level Architecture</h2>
+  <div class="diagram-wrap">
+    <div class="diagram-title">System Topology</div>
+    <pre>
+                                ┌──────────────┐
+                                │   BROWSER    │
+                                └──────┬───────┘
+                                       │
+                                ┌──────▼───────┐
+                                │    NGINX     │ :3000
+                                │  /        → Frontend (:5173)
+                                │  /api/*   → Backend  (:8080)
+                                │  /ws      → WebSocket(:8080)
+                                │  /admin/* → Admin SPA(:5174)
+                                │  /gateway → MCP GW   (:9080)
+                                │  /agent   → Agent Farm(:8082)
+                                └──┬──┬──┬──┬──┘
+               ┌───────────────────┘  │  │  └──────────────────┐
+               │                      │  │                     │
+      ┌────────▼────────┐    ┌───────▼──▼───────┐    ┌───────▼─────────┐
+      │  Portfolio       │    │  Portfolio       │    │  Admin Nexus    │
+      │  Frontend        │    │  Tracker API     │    │  (React SPA)   │
+      │  React (:5173)   │    │  Spring Boot     │    │  :5174         │
+      └─────────┬────────┘    │  (:8080)         │    └───────┬─────────┘
+                │             └────┬──────┬──────┘            │
+                │                  │      │           ┌───────▼─────────┐
+                ▼                  │      │           │  MCP Gateway    │
+           ┌─────────┐            │  ┌───▼──────┐    │  :9080/:8081    │
+           │ MySQL 8 │            │  │ Agent    │    └────────┬────────┘
+           │ :3306   │            │  │ Farm     │             │
+           └─────────┘            │  │ :8082    │    ┌────────┼────────┐
+                                  │  └──┬──┬────┘    │        │        │
+                                  │     │  │      ┌──▼──┐  ┌──▼──┐  ┌─▼──┐
+                             ┌────▼──┐  │  │      │ PT  │  │ Web │  │AWS │
+                             │Claude │  │  │      │ MCP │  │ MCP │  │MCP │
+                             │  API  │  │  │      │:3004│  │:3001│  │:3002│
+                             └───────┘  │  │      └─────┘  └─────┘  └────┘
+                                   ┌────▼──▼────┐
+                                   │Redis :6379 │  PostgreSQL :5432
+                                   └────────────┘</pre>
+  </div>
+</section>
+
+<!-- 2. Service Catalog -->
+<section class="section" id="services">
+  <h2><span class="icon">&#9881;</span> Service Catalog</h2>
+  <div class="card-grid">
+    <div class="card">
+      <h4><span class="tag tag-java">Java</span> Portfolio Tracker API</h4>
+      <p>Spring Boot 3.2 REST API. Domain logic, auth, AI analysis, tax engine, income tracking, approvals, Kite sync.</p>
+      <p style="margin-top:0.5rem;color:var(--blue);font-family:monospace;font-size:0.82rem;">:8080 &middot; portfolio_tracker_api</p>
+    </div>
+    <div class="card">
+      <h4><span class="tag tag-react">React</span> Portfolio Frontend</h4>
+      <p>React 19 SPA with TailwindCSS. Dashboard, AI chat, tax dashboard, income management, real-time WebSocket.</p>
+      <p style="margin-top:0.5rem;color:var(--blue);font-family:monospace;font-size:0.82rem;">:5173 &middot; portfolio_tracker_frontend</p>
+    </div>
+    <div class="card">
+      <h4><span class="tag tag-ts">Node</span> MCP Gateway</h4>
+      <p>Fastify API + MCP protocol server. Tool registry, consumer auth, subscription ACL, circuit breaker, audit log.</p>
+      <p style="margin-top:0.5rem;color:var(--blue);font-family:monospace;font-size:0.82rem;">:9080/:8081 &middot; mcp_gateway</p>
+    </div>
+    <div class="card">
+      <h4><span class="tag tag-ts">Node</span> Agent Farm</h4>
+      <p>AI orchestrator. BullMQ task queue, Vercel AI SDK, sync/async/streaming execution, 6 agent templates.</p>
+      <p style="margin-top:0.5rem;color:var(--blue);font-family:monospace;font-size:0.82rem;">:8082 &middot; agent_farm</p>
+    </div>
+    <div class="card">
+      <h4><span class="tag tag-react">React</span> Admin Nexus</h4>
+      <p>MCP Farm admin dashboard. Tool explorer, testing console, queue monitor, consumer management.</p>
+      <p style="margin-top:0.5rem;color:var(--blue);font-family:monospace;font-size:0.82rem;">:5174 &middot; admin_nexus</p>
+    </div>
+    <div class="card">
+      <h4><span class="tag tag-ts">Node</span> MCP Servers</h4>
+      <p>Portfolio (:3004) — 11 tools for holdings, tax, income. Web Search (:3001) — search + page extraction.</p>
+      <p style="margin-top:0.5rem;color:var(--blue);font-family:monospace;font-size:0.82rem;">:3001, :3004 &middot; StreamableHTTP</p>
+    </div>
+  </div>
+</section>
+
+<!-- 3. Authentication -->
+<section class="section" id="auth">
+  <h2><span class="icon">&#128274;</span> Authentication Architecture</h2>
+  <div class="flow-steps">
+    <div class="flow-step">
+      <div class="step-num">1</div>
+      <div class="step-content">
+        <h4>User Authentication (JWT)</h4>
+        <p>End users login with email/password. Backend issues HS256 JWT with 24hr expiry. Stored in localStorage, sent as <code>Authorization: Bearer</code> header on every request. JwtTokenFilter validates on each request.</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="step-num">2</div>
+      <div class="step-content">
+        <h4>Service-to-Service (API Key)</h4>
+        <p>Portfolio API calls Agent Farm using <code>AGENT_FARM_API_KEY</code> (default: <code>admin-secret</code>). Health check (3s timeout) determines availability before each AI request.</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="step-num">3</div>
+      <div class="step-content">
+        <h4>MCP Consumer Auth + Subscription</h4>
+        <p>Agent Farm calls MCP Gateway with consumer API key. Gateway checks <code>consumers</code> table, validates <code>subscriptions</code> (canRead/canExecute per MCP server). Rate limiting: 200 req/min.</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="step-num">4</div>
+      <div class="step-content">
+        <h4>Admin Auth</h4>
+        <p>Admin Nexus uses <code>ADMIN_API_KEY</code> stored in browser localStorage. Same key authenticates against Gateway and Agent Farm. Grants access to management routes.</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="step-num">5</div>
+      <div class="step-content">
+        <h4>MCP Server → Backend Auth</h4>
+        <p>Portfolio MCP server authenticates to Portfolio API using a service account JWT. Logs in on startup, caches token, uses it for all API calls.</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="step-num">6</div>
+      <div class="step-content">
+        <h4>Ownership Validation</h4>
+        <p><code>verifyPortfolioOwnership()</code> on all AI endpoints. Extracts userId from SecurityContext, verifies against portfolio.userId. ADMIN role bypasses.</p>
+      </div>
+    </div>
+    <div class="flow-step">
+      <div class="step-num">7</div>
+      <div class="step-content">
+        <h4>External APIs</h4>
+        <p>Anthropic Claude: <code>x-api-key</code> header. Zerodha Kite: OAuth 2.0 with API key + secret. Brave Search: API key.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 4. AI Analysis Flow -->
+<section class="section" id="ai-flow">
+  <h2><span class="icon">&#129302;</span> AI Analysis Flow</h2>
+  <div class="diagram-wrap">
+    <div class="diagram-title">POST /api/ai/portfolio/{id}/analyze</div>
+    <pre>
+Browser              Portfolio API            Agent Farm           Claude API
+  │                       │                       │                    │
+  │  POST /analyze        │                       │                    │
+  │──────────────────────>│                       │                    │
+  │                       │                       │                    │
+  │              1. Verify Ownership               │                    │
+  │                 (JWT → userId check)            │                    │
+  │                       │                       │                    │
+  │              2. Build Portfolio Context        │                    │
+  │                 (holdings, P&L, sectors)        │                    │
+  │                       │                       │                    │
+  │              3. Agent Farm Available?           │                    │
+  │                 GET /health (3s timeout)        │                    │
+  │                       │───────────────────────>│                    │
+  │                       │                       │                    │
+  │                  ┌────┴── YES ──┐  ┌── NO ───┴────┐               │
+  │                  │              │  │              │               │
+  │                  │ POST /tasks  │  │ Direct call  │               │
+  │                  │ templateId:4 │  │ to Claude    │               │
+  │                  │ mode: sync   │  │ with JSON    │               │
+  │                  │──────────────>  │ schema       │               │
+  │                  │              │  │──────────────────────────────>│
+  │                  │ Agent uses   │  │              │               │
+  │                  │ MCP tools:   │  │              │ Structured    │
+  │                  │ • portfolio  │  │              │ JSON response │
+  │                  │ • web-search │  │              │               │
+  │                  │              │  │<──────────────────────────────│
+  │                  │<─────────────│  │              │               │
+  │                  └──────────────┘  └──────────────┘               │
+  │                       │                                           │
+  │              4. Save to analysis_history                           │
+  │                 (model, prompt, raw response, health score)        │
+  │                       │                                           │
+  │  {healthScore, risks, │                                           │
+  │   recommendations}    │                                           │
+  │<──────────────────────│                                           │</pre>
+  </div>
+</section>
+
+<!-- 5. Tax Flow -->
+<section class="section" id="tax-flow">
+  <h2><span class="icon">&#128176;</span> Tax Calculation Engine</h2>
+
+  <div class="diagram-wrap">
+    <div class="diagram-title">FIFO Lot Matching Algorithm</div>
+    <pre>
+Input: FY "2025-26" → April 2025 to March 2026
+
+SELL TRADES IN FY:
+  RELIANCE  2025-06-10  10 shares @ ₹2,900
+  TCS       2025-11-20   5 shares @ ₹3,800
+
+BUY TRADES (FIFO QUEUE):
+  RELIANCE  2025-01-15  10 shares @ ₹2,650.50
+  TCS       2025-03-20   5 shares @ ₹3,450.00
+
+FIFO MATCHING:
+  ┌─────────────────────────────────────────────────────────┐
+  │ RELIANCE: BUY Jan 15 → SELL Jun 10                      │
+  │   146 days held (< 365) → STCG                         │
+  │   Gain: (₹2,900 - ₹2,650.50) × 10 = ₹2,495            │
+  │                                                          │
+  │ TCS: BUY Mar 20 → SELL Nov 20                           │
+  │   245 days held (< 365) → STCG                         │
+  │   Gain: (₹3,800 - ₹3,450) × 5 = ₹1,750                │
+  └─────────────────────────────────────────────────────────┘
+
+TAX COMPUTATION:
+  LTCG (>365d):  ₹0      Tax: ₹0     (12.5% above ₹1.25L)
+  STCG (≤365d): ₹4,245   Tax: ₹849   (20% flat)
+
+INCOME AGGREGATION:
+  Dividends:   ₹5,000   TDS: ₹500
+  FD Interest: ₹12,000  TDS: ₹1,200
+  ───────────────────────────────
+  Total: ₹21,245    TDS: ₹1,700</pre>
+  </div>
+
+  <h3>Indian Tax Rules (Post Budget 2024)</h3>
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr><th>Asset Class</th><th>Holding</th><th>Rate</th><th>Exemption</th></tr>
+      </thead>
+      <tbody>
+        <tr><td>Listed Equity (STT paid)</td><td>&gt; 12 months</td><td style="color:var(--green)">12.5% LTCG</td><td>₹1.25 Lakh/FY</td></tr>
+        <tr><td>Listed Equity (STT paid)</td><td>&le; 12 months</td><td style="color:var(--amber)">20% STCG</td><td>None</td></tr>
+        <tr><td>Debt Mutual Fund</td><td>Any</td><td>Slab rate</td><td>No indexation</td></tr>
+        <tr><td>SGB (maturity)</td><td>At maturity</td><td style="color:var(--green)">0% Tax-free</td><td>Full</td></tr>
+        <tr><td>Dividends</td><td>N/A</td><td>Slab rate</td><td>TDS u/s 194</td></tr>
+        <tr><td>FD Interest</td><td>N/A</td><td>Slab rate</td><td>TDS u/s 194A</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 6. MCP Flow -->
+<section class="section" id="mcp-flow">
+  <h2><span class="icon">&#128268;</span> MCP Tool Execution Flow</h2>
+  <div class="diagram-wrap">
+    <div class="diagram-title">Tool Call: portfolio-tracker__get_holdings</div>
+    <pre>
+Agent Farm           MCP Gateway          Client Pool         MCP Server        Portfolio API
+  │                      │                    │                   │                  │
+  │ POST /api/tools/call │                    │                   │                  │
+  │  tool: "portfolio-   │                    │                   │                  │
+  │   tracker__          │                    │                   │                  │
+  │   get_holdings"      │                    │                   │                  │
+  │─────────────────────>│                    │                   │                  │
+  │                      │ 1. Parse tool path │                   │                  │
+  │                      │ 2. Check consumer  │                   │                  │
+  │                      │    subscription    │                   │                  │
+  │                      │ 3. Route to pool   │                   │                  │
+  │                      │───────────────────>│ Lazy init         │                  │
+  │                      │                    │──────────────────>│                  │
+  │                      │                    │  JSON-RPC call     │ JWT + GET /api/ │
+  │                      │                    │                   │ portfolios/1/    │
+  │                      │                    │                   │ holdings         │
+  │                      │                    │                   │─────────────────>│
+  │                      │                    │                   │  Holdings JSON   │
+  │                      │                    │                   │<─────────────────│
+  │                      │                    │  Tool result       │                  │
+  │                      │                    │<──────────────────│                  │
+  │                      │<───────────────────│                   │                  │
+  │                      │ 4. Audit log       │                   │                  │
+  │  Tool result JSON    │                    │                   │                  │
+  │<─────────────────────│                    │                   │                  │</pre>
+  </div>
+</section>
+
+<!-- 7. Database -->
+<section class="section" id="database">
+  <h2><span class="icon">&#128451;</span> Database Schema</h2>
+
+  <h3>MySQL — <code>portfolio</code> (12 tables)</h3>
+  <div class="diagram-wrap">
+    <pre>
+users ─────────┬─── portfolios ──────┬─── portfolio_holdings ──── stocks
+  │             │                     │                              │
+  │             │                     └─── transactions              │
+  │             │                                              stock_price_history
+  ├─── income_entries          approval_requests
+  ├─── tradebook_entries
+  ├─── analysis_history
+  ├─── chat_history
+  └─── alerts</pre>
+  </div>
+
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Table</th><th>Key Fields</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>users</code></td><td>id, email, password, role</td><td>Authentication &amp; authorization</td></tr>
+        <tr><td><code>portfolios</code></td><td>user_id, name, currency</td><td>Portfolio containers</td></tr>
+        <tr><td><code>portfolio_holdings</code></td><td>portfolio_id, stock_id, qty, avg_buy</td><td>Current positions</td></tr>
+        <tr><td><code>stocks</code></td><td>symbol, company_name, sector, price</td><td>Stock master data</td></tr>
+        <tr><td><code>transactions</code></td><td>portfolio_id, type (BUY/SELL), qty, price</td><td>Trade execution log</td></tr>
+        <tr><td><code>income_entries</code></td><td>user_id, type, amount, financial_year, tds</td><td style="color:var(--green)">Investment income tracking</td></tr>
+        <tr><td><code>tradebook_entries</code></td><td>user_id, symbol, trade_date, type, order_id</td><td style="color:var(--green)">Kite tradebook imports</td></tr>
+        <tr><td><code>analysis_history</code></td><td>user_id, ai_model, raw_response, health_score</td><td style="color:var(--green)">AI analysis audit trail</td></tr>
+        <tr><td><code>chat_history</code></td><td>user_id, portfolio_id, role, content</td><td style="color:var(--green)">Chat persistence</td></tr>
+        <tr><td><code>approval_requests</code></td><td>user_id, status, payload, review_notes</td><td style="color:var(--green)">Approval workflow</td></tr>
+        <tr><td><code>stock_price_history</code></td><td>stock_id, date, ohlc</td><td>Historical prices</td></tr>
+        <tr><td><code>alerts</code></td><td>user_id, stock_id, condition</td><td>Price alerts</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <h3>PostgreSQL — <code>mcp_farm</code> (7 tables)</h3>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Table</th><th>Purpose</th></tr></thead>
+      <tbody>
+        <tr><td><code>mcp_servers</code></td><td>Registered MCP server endpoints + health status</td></tr>
+        <tr><td><code>tool_definitions</code></td><td>Cached tool schemas (name, description, inputSchema)</td></tr>
+        <tr><td><code>consumers</code></td><td>API consumers with keys + rate limits</td></tr>
+        <tr><td><code>subscriptions</code></td><td>Consumer &rarr; MCP server ACL (canRead/canExecute)</td></tr>
+        <tr><td><code>tool_calls</code></td><td>Audit log of every tool execution</td></tr>
+        <tr><td><code>agent_templates</code></td><td>LLM configs (model, system prompt, MCPs)</td></tr>
+        <tr><td><code>agent_tasks</code></td><td>Task records (input, output, status, exec time)</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 8. MCP Tools -->
+<section class="section" id="tools">
+  <h2><span class="icon">&#128295;</span> MCP Tool Registry</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>MCP Server</th><th>Tool</th><th>User-Scoped</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td rowspan="11"><strong>portfolio-tracker</strong><br><span style="color:var(--text3)">:3004</span></td><td><code>list_portfolios</code></td><td>Yes</td><td>List user portfolios</td></tr>
+        <tr><td><code>get_portfolio_holdings</code></td><td>Yes</td><td>Holdings with P&amp;L</td></tr>
+        <tr><td><code>get_portfolio_metrics</code></td><td>Yes</td><td>Sector allocation, top holdings</td></tr>
+        <tr><td><code>get_portfolio_summary</code></td><td>Yes</td><td>Full portfolio view</td></tr>
+        <tr><td><code>get_portfolio_transactions</code></td><td>Yes</td><td>Transaction history</td></tr>
+        <tr><td><code>get_recent_transactions</code></td><td>Yes</td><td>Recent trades</td></tr>
+        <tr><td><code>search_stocks</code></td><td>No</td><td>Symbol/name search</td></tr>
+        <tr><td><code>get_stock_price</code></td><td>No</td><td>Current NSE price</td></tr>
+        <tr><td><code>get_stock_analysis</code></td><td>No</td><td>SMA, RSI, MACD indicators</td></tr>
+        <tr><td><code>get_tax_summary</code></td><td>Yes</td><td>LTCG/STCG breakdown</td></tr>
+        <tr><td><code>get_income_entries</code></td><td>Yes</td><td>Recorded income</td></tr>
+        <tr><td rowspan="2"><strong>web-search</strong><br><span style="color:var(--text3)">:3001</span></td><td><code>web_search</code></td><td>No</td><td>Brave/DuckDuckGo search</td></tr>
+        <tr><td><code>get_page_content</code></td><td>No</td><td>Extract text from URL</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 9. Agents -->
+<section class="section" id="agents">
+  <h2><span class="icon">&#129504;</span> Agent Templates</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>ID</th><th>Name</th><th>Model</th><th>MCP Servers</th><th>Output</th></tr></thead>
+      <tbody>
+        <tr><td>1</td><td>Portfolio Analyst</td><td>claude-sonnet-4-6</td><td>portfolio-tracker, web-search</td><td>Free-form text</td></tr>
+        <tr><td>2</td><td>Research Agent</td><td>claude-3.5-sonnet</td><td>web-search</td><td>Research synthesis</td></tr>
+        <tr><td>3</td><td>DevOps Agent</td><td>claude-3.5-sonnet</td><td>aws, atlassian</td><td>Infrastructure</td></tr>
+        <tr><td>4</td><td>Portfolio Analysis</td><td>claude-sonnet-4-6</td><td>portfolio-tracker, web-search</td><td>Structured JSON</td></tr>
+        <tr><td>5</td><td>Rebalancing Agent</td><td>claude-sonnet-4-6</td><td>portfolio-tracker, web-search</td><td>JSON array</td></tr>
+        <tr><td>6</td><td>Tax Advisor</td><td>claude-sonnet-4-6</td><td>portfolio-tracker</td><td>Tax optimization</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 10. Endpoints -->
+<section class="section" id="endpoints">
+  <h2><span class="icon">&#128279;</span> API Endpoints</h2>
+
+  <details>
+    <summary>Authentication (2 endpoints)</summary>
+    <div class="detail-content">
+      <div class="endpoint"><span class="method method-post">POST</span><span class="path">/api/auth/register</span><span class="desc">Register new user</span></div>
+      <div class="endpoint"><span class="method method-post">POST</span><span class="path">/api/auth/login</span><span class="desc">Login &rarr; JWT</span></div>
+    </div>
+  </details>
+
+  <details>
+    <summary>Portfolio Management (8 endpoints)</summary>
+    <div class="detail-content">
+      <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/portfolios</span><span class="desc">List portfolios</span></div>
+      <div class="endpoint"><span class="method method-post">POST</span><span class="path">/api/portfolios</span><span class="desc">Create portfolio</span></div>
+      <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/portfolios/{id}</span><span class="desc">Get by ID</span></div>
+      <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/portfolios/{id}/holdings</span><span class="desc">Get holdings</span></div>
+      <div class="endpoint"><span class="method method-post">POST</span><span class="path">/api/portfolios/{id}/holdings</span><span class="desc">Add holding</span></div>
+      <div class="endpoint"><span class="method method-delete">DELETE</span><span class="path">/api/portfolios/{pid}/holdings/{hid}</span><span class="desc">Remove holding</span></div>
+      <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/portfolios/{id}/analysis</span><span class="desc">Analysis view</span></div>
+      <div class="endpoint"><span class="method method-post">POST</span><span class="path">/api/portfolios/{id}/holdings/upload</span><span class="desc">CSV upload</span></div>
+    </div>
+  </details>
+
+  <details>
+    <summary>AI Analysis (13 endpoints, ownership protected)</summary>
+    <div class="detail-content">
+      <div class="endpoint"><span class="method method-post">POST</span><span class="path">/api/ai/portfolio/{id}/analyze</span><span class="desc">Full analysis</span></div>
+      <div class="endpoint"><span class="method method-post">POST</span><span class="path">/api/ai/portfolio/{id}/chat</span><span class="desc">Chat (SSE)</span></div>
+      <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/ai/portfolio/{id}/rebalance</span><span class="desc">Rebalancing</span></div>
+      <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/ai/portfolio/{id}/chat/history</span><span class="desc">Chat history</span></div>
+      <div class="endpoint"><span class="method method-post">POST</span><span class="path">/api/ai/portfolio/{id}/chat/history</span><span class="desc">Save chat</span></div>
+      <div class="endpoint"><span class="method method-delete">DELETE</span><span class="path">/api/ai/portfolio/{id}/chat/history</span><span class="desc">Clear chat</span></div>
+      <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/ai/portfolio/{id}/analysis/history</span><span class="desc">Analysis history</span></div>
+      <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/ai/portfolio/{id}/analysis/latest</span><span class="desc">Latest analysis</span></div>
+      <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/ai/portfolio/{id}/rebalancing/history</span><span class="desc">Rebalance history</span></div>
+      <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/ai/portfolio/{id}/rebalancing/latest</span><span class="desc">Latest rebalance</span></div>
+      <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/ai/analysis/{analysisId}</span><span class="desc">Transparency detail</span></div>
+      <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/ai/portfolio/{pid}/stock/{symbol}</span><span class="desc">Stock recommendation</span></div>
+      <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/ai/status</span><span class="desc">AI config status</span></div>
+    </div>
+  </details>
+
+  <details>
+    <summary>Tax &amp; Tradebook (3 endpoints, NEW)</summary>
+    <div class="detail-content">
+      <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/tax/{fy}/summary</span><span class="desc">Capital gains tax</span></div>
+      <div class="endpoint"><span class="method method-post">POST</span><span class="path">/api/tax/tradebook/upload</span><span class="desc">Upload Kite CSV</span></div>
+      <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/tax/tradebook</span><span class="desc">List trades</span></div>
+    </div>
+  </details>
+
+  <details>
+    <summary>Income Tracking (3 endpoints, NEW)</summary>
+    <div class="detail-content">
+      <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/income</span><span class="desc">List income</span></div>
+      <div class="endpoint"><span class="method method-post">POST</span><span class="path">/api/income</span><span class="desc">Add income</span></div>
+      <div class="endpoint"><span class="method method-delete">DELETE</span><span class="path">/api/income/{id}</span><span class="desc">Delete income</span></div>
+    </div>
+  </details>
+
+  <details>
+    <summary>Approval Workflow (4 endpoints, NEW)</summary>
+    <div class="detail-content">
+      <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/approvals</span><span class="desc">List approvals</span></div>
+      <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/approvals/{id}</span><span class="desc">Approval detail</span></div>
+      <div class="endpoint"><span class="method method-post">POST</span><span class="path">/api/approvals/{id}/approve</span><span class="desc">Approve</span></div>
+      <div class="endpoint"><span class="method method-post">POST</span><span class="path">/api/approvals/{id}/reject</span><span class="desc">Reject</span></div>
+    </div>
+  </details>
+
+  <details>
+    <summary>Zerodha Kite (5 endpoints)</summary>
+    <div class="detail-content">
+      <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/kite/login</span><span class="desc">OAuth redirect</span></div>
+      <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/kite/callback</span><span class="desc">OAuth callback</span></div>
+      <div class="endpoint"><span class="method method-post">POST</span><span class="path">/api/kite/connect</span><span class="desc">Store token</span></div>
+      <div class="endpoint"><span class="method method-get">GET</span><span class="path">/api/kite/status</span><span class="desc">Connection status</span></div>
+      <div class="endpoint"><span class="method method-post">POST</span><span class="path">/api/kite/sync</span><span class="desc">Sync holdings</span></div>
+    </div>
+  </details>
+</section>
+
+<!-- 11. Frontend -->
+<section class="section" id="frontend">
+  <h2><span class="icon">&#128187;</span> Frontend Pages</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Route</th><th>Page</th><th>Key Features</th></tr></thead>
+      <tbody>
+        <tr><td><code>/login</code></td><td>Login / Register</td><td>Email + password, register toggle</td></tr>
+        <tr><td><code>/dashboard</code></td><td>Dashboard</td><td>Holdings table, metrics bar, sector chart, CSV import, Kite sync</td></tr>
+        <tr><td><code>/holdings</code></td><td>Holdings</td><td>Stock list, click-through to analysis</td></tr>
+        <tr><td><code>/stocks/:symbol</code></td><td>Stock Analysis</td><td>Price, SMA50/200, RSI, MACD, AI insights</td></tr>
+        <tr><td><code>/transactions</code></td><td>Transactions</td><td>Buy/sell execution, trade history</td></tr>
+        <tr><td><code>/ai</code></td><td>AI Assessment</td><td>Chat (SSE), Analysis, Rebalance, History, Transparency Panel</td></tr>
+        <tr style="background:rgba(34,197,94,0.05)"><td><code>/tax</code></td><td>Tax Dashboard</td><td>FY selector, LTCG/STCG cards, capital gains table, income breakdown</td></tr>
+        <tr style="background:rgba(34,197,94,0.05)"><td><code>/income</code></td><td>Income &amp; Trades</td><td>Income CRUD (7 types), Tradebook CSV upload, tabbed UI</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 12. Resilience -->
+<section class="section" id="resilience">
+  <h2><span class="icon">&#128737;</span> Resilience Patterns</h2>
+  <div class="card-grid">
+    <div class="card">
+      <h4>AI Fallback</h4>
+      <p>Agent Farm (MCP tools, richer context) &rarr; Direct Claude API (inline schema). 3s health check timeout determines path.</p>
+    </div>
+    <div class="card">
+      <h4>Circuit Breaker</h4>
+      <p>MCP Gateway client pool: 5 failures &rarr; 60s open &rarr; half-open retry. Stale session eviction on ECONNREFUSED.</p>
+    </div>
+    <div class="card">
+      <h4>Task Queue</h4>
+      <p>BullMQ: 5 concurrent workers, 3 retries with exponential backoff (2s base), 120s agent timeout, max 10 tool steps.</p>
+    </div>
+    <div class="card">
+      <h4>Data Import</h4>
+      <p>Kite API sync (real-time) &rarr; CSV file upload &rarr; Paste CSV text (mobile). Three fallback levels for data input.</p>
+    </div>
+    <div class="card">
+      <h4>Health Monitoring</h4>
+      <p>30s health check loop for all registered MCP servers. Status tracked in database. Auto-reconnect on recovery.</p>
+    </div>
+    <div class="card">
+      <h4>Tradebook Dedup</h4>
+      <p>order_id uniqueness check prevents duplicate imports. Same CSV uploaded twice &rarr; 0 created, N skipped.</p>
+    </div>
+  </div>
+</section>
+
+<!-- 13. Tech Stack -->
+<section class="section" id="tech">
+  <h2><span class="icon">&#9881;</span> Technology Stack</h2>
+  <div class="table-wrap">
+    <table>
+      <thead><tr><th>Layer</th><th>Technologies</th></tr></thead>
+      <tbody>
+        <tr><td><strong>Backend</strong></td><td>Java 23, Spring Boot 3.2, Maven, JPA/Hibernate, MySQL 8</td></tr>
+        <tr><td><strong>Frontend</strong></td><td>React 19, TypeScript 5.9, Vite 8, TailwindCSS 4, Zustand 5, React Query 5</td></tr>
+        <tr><td><strong>Infrastructure</strong></td><td>Node.js 18, Fastify v4, Drizzle ORM, PostgreSQL 15</td></tr>
+        <tr><td><strong>AI</strong></td><td>Anthropic Claude Sonnet 4.6, Vercel AI SDK v6</td></tr>
+        <tr><td><strong>MCP</strong></td><td>@modelcontextprotocol/sdk v1.29, StreamableHTTP transport</td></tr>
+        <tr><td><strong>Queue</strong></td><td>BullMQ + Redis 7</td></tr>
+        <tr><td><strong>Broker</strong></td><td>Zerodha Kite Connect (OAuth 2.0)</td></tr>
+        <tr><td><strong>Charts</strong></td><td>Recharts 3.8</td></tr>
+        <tr><td><strong>Real-time</strong></td><td>STOMP over SockJS, SSE (Server-Sent Events)</td></tr>
+        <tr><td><strong>Containers</strong></td><td>Docker, Docker Compose, Nginx</td></tr>
+        <tr><td><strong>API Docs</strong></td><td>SpringDoc OpenAPI 3.0 + Swagger UI</td></tr>
+      </tbody>
+    </table>
+  </div>
+</section>
+
+<!-- 14. Deployment -->
+<section class="section" id="deploy">
+  <h2><span class="icon">&#128640;</span> Deployment</h2>
+
+  <h3>Local Development (Docker Compose)</h3>
+  <div class="diagram-wrap">
+    <pre>
+Host Machine (macOS)
+├── MySQL 8 (:3306)            ← native install
+├── PostgreSQL 15 (:5432)      ← native install
+│
+└── Docker Desktop
+    └── platform_network (bridge)
+        ├── redis (:6379)
+        ├── nginx (:3000)          ← unified entry point
+        ├── portfolio-tracker (:8080)
+        ├── portfolio-tracker-frontend (:5173)
+        ├── mcp-gateway (:9080/:8081)
+        ├── agent-farm (:8082)
+        ├── mcp-portfolio-tracker (:3004)
+        ├── mcp-web-search (:3001)
+        └── admin-nexus (:5174)</pre>
+  </div>
+
+  <h3>Production (AWS)</h3>
+  <div class="diagram-wrap">
+    <pre>
+EC2 (t3.small)           → Docker Compose + Nginx SSL (Let's Encrypt)
+RDS MySQL (db.t3.micro)  → portfolio database
+RDS PostgreSQL           → mcp_farm database
+ElastiCache Redis        → BullMQ task queue
+S3                       → Frontend assets, DB backups</pre>
+  </div>
+</section>
+
+<!-- Design Principles -->
+<section class="section">
+  <h2><span class="icon">&#128161;</span> Design Principles</h2>
+  <div class="card-grid">
+    <div class="card"><h4>Apps own data, Agent Farm owns intelligence</h4><p>Portfolio API manages domain data; Agent Farm orchestrates all AI. Clean separation.</p></div>
+    <div class="card"><h4>User context via tool parameters</h4><p>userId passed explicitly to MCP tools. Language-agnostic, no JWT forwarding complexity.</p></div>
+    <div class="card"><h4>Defense in depth</h4><p>7 authentication layers from JWT to ownership validation. Each layer independent.</p></div>
+    <div class="card"><h4>Graceful degradation</h4><p>Agent Farm down &rarr; Claude fallback. Kite down &rarr; CSV import. Always functional.</p></div>
+    <div class="card"><h4>Full transparency</h4><p>Every AI analysis persisted with model, prompt, raw response for complete audit trail.</p></div>
+    <div class="card"><h4>FIFO tax compliance</h4><p>Tax engine uses legally required First-In-First-Out lot matching per Indian regulations.</p></div>
+  </div>
+</section>
+
+<div style="text-align:center;padding:3rem 0 1rem;color:var(--text3);font-size:0.85rem;">
+  Portfolio Intelligence Platform &middot; Built with Claude Code &middot; April 2026
+</div>
+
+</div>
+</body>
+</html>

@@ -1,5 +1,13 @@
 # Workspace: ~/Documents/claude/
 
+## Architecture Reference
+
+Full system architecture documentation is available at:
+- **Markdown**: `docs/ARCHITECTURE.md` (for Claude Code, Cursor, IntelliJ)
+- **HTML (visual)**: `docs/architecture.html` (open in Chrome for dark-themed interactive view)
+
+---
+
 ## READ THIS FIRST — Every Time
 
 You are working in a multi-project workspace. This directory contains multiple independent applications, a shared infrastructure platform, and project templates. Before doing ANY work, read this entire file to understand the workspace layout, routing rules, and conventions.
