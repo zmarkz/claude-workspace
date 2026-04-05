@@ -1,0 +1,4 @@
+packages:
+  - 'ui'
+  - 'portfolio-tracker-frontend'
+  - 'admin-nexus'
