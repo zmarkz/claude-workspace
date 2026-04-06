@@ -28,3 +28,5 @@ Thumbs.db
 project-templates/**/node_modules/
 project-templates/**/target/
 project-templates/**/dist/
+
+*storybook.log
