@@ -133,11 +133,20 @@ Additional log patterns from Smart Context Management:
 6. **Include cost estimate** in `[RESULT]` log
 7. **Fallback to MarkdownMessage** if JSON parsing fails
 
+### Qwen Local for Document Parsing (FREE)
+
+Qwen (template 4, local via Ollama) is also used for:
+- **Salary slip parsing**: Any format (PDF/CSV/XLSX) → structured JSON (basic, HRA, PF, TDS)
+- **Tradebook fallback**: When rigid parser fails >50% of rows → Qwen parses semantically
+- **Session summarization**: Rolling conversation summaries every 3 turns
+- **Insight extraction**: Key facts extracted from COMPLEX query responses
+
 ### Cost Optimization
 
 - **93% of queries** go to Qwen local (₹0)
 - **7% of queries** go to Claude (~₹0.03-0.08 each)
-- **Monthly cost**: ~₹46 (vs ₹191 without routing) — **76% savings**
+- **All document parsing** → Qwen local (₹0)
+- **Monthly cost**: ~₹28 (with smart context) — **85% savings vs direct Claude**
 
 ---
 
@@ -515,6 +524,29 @@ cd ~/Documents/claude/platform
 - Local: `platform/.env.local` (gitignored)
 - Production: `platform/.env.prod` on EC2 (never committed)
 - Template: `platform/.env.prod.example` (committed, no secrets)
+
+---
+
+## Cloudflare Tunnel (rakha.xyz)
+
+The platform is publicly accessible via Cloudflare Tunnel:
+
+| URL | Routes To | Purpose |
+|-----|-----------|---------|
+| `https://rakha.xyz` | nginx (:3000) | All-in-one (frontend, `/api/*`, `/admin/*`, `/gateway/*`, `/agent/*`) |
+| `https://api.rakha.xyz` | :8080 | API direct (subdomain shortcut) |
+| `https://admin.rakha.xyz` | :5174 | Admin Nexus direct (subdomain shortcut) |
+
+**Tunnel name**: `rakha` | **Config**: `~/.cloudflared/config.yml`
+
+```bash
+# Start tunnel manually
+cloudflared tunnel run rakha
+
+# Tunnel is also in docker-compose.yml (cloudflared service)
+# Start everything including tunnel:
+docker compose -f docker-compose.yml -f docker-compose.proxy.yml up -d
+```
 
 ---
 

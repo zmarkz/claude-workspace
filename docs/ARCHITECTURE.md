@@ -20,7 +20,7 @@ An AI-first personal finance advisor for Indian retail investors. Multi-broker, 
 | Data Import | CDSL CAS, NSDL CAS, MFCentral, Broker CSV, Form 16, 26AS, AIS |
 | Languages | Java 23, TypeScript 5.9 |
 | Databases | MySQL 8 (business), PostgreSQL 15 (infra), Redis 7 (queue) |
-| API Endpoints | 75+ REST + 1 WebSocket + 2 MCP protocol |
+| API Endpoints | 85+ REST + 1 WebSocket + 2 MCP protocol |
 | Frontend Pages | 13 (+ login) |
 | Scheduled Jobs | 3 (performance 4:30PM, tax harvest Sat 9AM, briefing 6AM) |
 
