@@ -10,11 +10,11 @@ An AI-first personal finance advisor for Indian retail investors. Multi-broker, 
 
 | Metric | Value |
 |--------|-------|
-| Applications | 5 (2 SPAs, 1 API, 1 Gateway, 1 Orchestrator) |
+| Applications | 6 (2 SPAs, 1 API, 1 Gateway, 1 Orchestrator, 1 RAG Service) |
 | MySQL Tables | 25+ (business data) |
 | PostgreSQL Tables | 7 (MCP infrastructure) |
-| MCP Servers | 4 (portfolio, web-search, aws, atlassian) |
-| MCP Tools | 17 registered |
+| MCP Servers | 5 (portfolio, web-search, aws, atlassian, knowledge-store) |
+| MCP Tools | 20 registered |
 | Agent Templates | 6 |
 | Supported Brokers | 7 (Zerodha, Upstox, Angel One, 5paisa, ICICI Direct, Groww, Paytm Money) |
 | Data Import | CDSL CAS, NSDL CAS, MFCentral, Broker CSV, Form 16, 26AS, AIS |
@@ -87,8 +87,20 @@ An AI-first personal finance advisor for Indian retail investors. Multi-broker, 
                              ┌────▼─────┐ ┌─▼──────┐ ┌─▼──────────┐
                              │Anthropic │ │ Redis  │ │ PostgreSQL │
                              │Claude API│ │ :6379  │ │ :5432      │
-                             │(External)│ └────────┘ └────────────┘
-                             └──────────┘
+                             │(External)│ └────────┘ │ + pgvector │
+                             └──────────┘            └─────┬──────┘
+                                                           │
+                                                    ┌──────▼──────┐
+          Portfolio API ────────────────────────────►│ Knowledge   │
+          (KnowledgeStoreClient)                     │ Store       │
+                                                     │ Fastify     │
+                                                     │ :3010       │
+                                                     │             │
+                                                     │ - pgvector  │
+                                                     │ - Embeddings│◄─── Ollama nomic-embed-text
+                                                     │ - Cache     │     (FREE, 768 dims)
+                                                     │ - MCP Server│
+                                                     └─────────────┘
 ```
 
 ---
@@ -107,7 +119,8 @@ An AI-first personal finance advisor for Indian retail investors. Multi-broker, 
 | 8 | Nginx | Reverse Proxy | Nginx | 3000 | `platform_nginx` | Routing |
 | 9 | Redis | Queue/Cache | Redis 7 Alpine | 6379 | `platform_redis` | BullMQ |
 | 10 | MySQL | Database | MySQL 8.0 | 3306 | Host | Business data |
-| 11 | PostgreSQL | Database | PostgreSQL 15 | 5432 | Host | MCP metadata |
+| 11 | PostgreSQL | Database | PostgreSQL 15 + pgvector | 5432 | Host | MCP metadata + vectors |
+| 12 | Knowledge Store | RAG Service | Node.js, Fastify, pgvector, Ollama | 3010 | `knowledge_store` | Semantic search + cache |
 
 ---
 
@@ -305,7 +318,69 @@ Agent Farm          MCP Gateway           Client Pool          MCP Server       
 
 ---
 
-## 8. Database Schema
+## 8. Knowledge Store & Smart Context
+
+### Knowledge Store Service (port 3010)
+
+Shared RAG + caching service using pgvector in PostgreSQL. Provides semantic search, key-value cache, and pre-computed digests. Serves portfolio-tracker now, any future app later.
+
+```
+Portfolio Tracker API                        Knowledge Store (:3010)
+  │                                                │
+  ├── KnowledgeStoreClient.java                    ├── POST /store    → embed + save to pgvector
+  │   ├── store(userId, category, content)    ───► │
+  │   ├── search(userId, query, limit)        ───► ├── POST /query    → cosine similarity search
+  │   ├── searchSessionInsights(userId, q)    ───► │
+  │   ├── storeSessionInsight(userId, text)   ───► │
+  │   ├── getCachedResponse(userId, hash)     ───► ├── GET /cache/get → key-value lookup
+  │   ├── cacheResponse(userId, hash, resp)   ───► ├── POST /cache/set→ store with TTL
+  │   ├── getDigest(userId, type)             ───► ├── GET /digest    → pre-computed summary
+  │   └── saveDigest(userId, type, content)   ───► └── POST /digest   → upsert summary
+  │
+  └── Embedding: Ollama nomic-embed-text (768 dims, FREE)
+```
+
+### 3-Layer Smart Context Management
+
+Replaces blind `messages.slice(-10)` with curated context. Reduces Claude input tokens ~42%.
+
+```
+BEFORE: [10 raw messages ~2500tok] + [portfolio ~800tok] → LLM  (~3650 input tokens)
+AFTER:  [summary ~200tok] + [3 messages ~600tok] + [insights ~150tok] + [portfolio ~800tok] → LLM (~1800 tokens)
+```
+
+**Layer 1 — Rolling Summary**: After every 3rd turn, Qwen local (FREE) summarizes the conversation → `chat_sessions.summary` column.
+
+**Layer 2 — Session Insights**: After each COMPLEX query, Qwen extracts key facts → stored in Knowledge Store (`session_insight` category) for cross-session semantic retrieval.
+
+**Layer 3 — Smart Context Window**: `AIAnalysisService.buildSmartContext()` assembles:
+1. Session summary (if ≥3 turns) — ~200 tokens
+2. Last 3 raw turns from current session — ~600 tokens
+3. Knowledge Store insights (semantic search, top 3) — ~150 tokens
+4. Current message
+5. Portfolio data (always in systemOverride) — ~800 tokens
+
+**Session Lifecycle**:
+```
+New Chat → createSession()
+  │
+  ├── Turn 1-2: raw messages only (no summary yet)
+  ├── Turn 3: triggerSummaryIfNeeded() → Qwen summarizes → chat_sessions.summary
+  ├── Turn 6: rolling summary updated (integrates new messages)
+  │
+  ├── COMPLEX query: extractSessionInsights() → Knowledge Store
+  │
+  └── New Chat clicked → finalizeSession()
+       ├── Final summary via Qwen (≤300 words)
+       ├── Stored in chat_sessions.summary
+       └── Stored in Knowledge Store for cross-session retrieval
+```
+
+**Cost Impact**: Monthly Claude spend ~₹46 → ~₹28 (39% reduction). Qwen calls: ₹0 (local). Embeddings: ₹0 (Ollama).
+
+---
+
+## 9. Database Schema
 
 ### MySQL — `portfolio` (23 tables)
 
@@ -318,7 +393,7 @@ users ─────────┬─── portfolios ──────┬�
   ├─── income_entries                 │
   ├─── tradebook_entries              stocks ────┘
   ├─── analysis_history
-  ├─── chat_history                   financial_goals ──── goal_allocations
+  ├─── chat_sessions ──── chat_history financial_goals ──── goal_allocations
   ├─── approval_requests
   ├─── financial_goals                net_worth_assets
   ├─── net_worth_assets               mutual_fund_holdings
@@ -341,10 +416,11 @@ users ─────────┬─── portfolios ──────┬�
 | `income_entries` | user_id, type, amount, financial_year, tax_deducted | Investment income |
 | `tradebook_entries` | user_id, symbol, trade_date, trade_type, price, order_id | Kite trade history |
 | `analysis_history` | user_id, portfolio_id, type, ai_model, raw_response, health_score | AI analysis audit |
-| `chat_history` | user_id, portfolio_id, role, content | Chat persistence |
+| `chat_sessions` | user_id, portfolio_id, title, turn_count, summary | Session grouping |
+| `chat_history` | user_id, portfolio_id, session_id, role, content | Chat persistence |
 | `approval_requests` | user_id, portfolio_id, status, payload, review_notes | Approval workflow |
 
-### PostgreSQL — `mcp_farm` (7 tables)
+### PostgreSQL — `mcp_farm` (10 tables)
 
 | Table | Purpose |
 |-------|---------|
@@ -355,6 +431,9 @@ users ─────────┬─── portfolios ──────┬�
 | `tool_calls` | Audit log of every tool execution |
 | `agent_templates` | LLM configs (model, system prompt, MCP associations) |
 | `agent_tasks` | Task execution records (input, output, status, time) |
+| `knowledge_entries` | RAG entries with pgvector embeddings (768-dim), category, source |
+| `cache_entries` | Key-value cache with TTL (response caching) |
+| `digests` | Pre-computed portfolio/tax/goals summaries |
 
 ---
 
@@ -375,6 +454,9 @@ users ─────────┬─── portfolios ──────┬�
 | | `get_income_entries` | Yes | Recorded income |
 | web-search (:3001) | `web_search` | No | Brave/DuckDuckGo search |
 | | `get_page_content` | No | Extract text from URL |
+| knowledge-store (:3010) | `knowledge_search` | Yes | Semantic search past analyses/insights |
+| | `knowledge_get_digest` | Yes | Get pre-computed portfolio/tax digest |
+| | `knowledge_store_fact` | Yes | Store user preference/decision |
 
 ---
 
@@ -625,3 +707,10 @@ S3                 → Frontend assets, DB backups
 | `ADMIN_API_KEY` | Yes | `admin-secret` | Admin authentication |
 | `ANTHROPIC_API_KEY` | Yes | — | Claude API key |
 | `OPENAI_API_KEY` | No | — | OpenAI fallback |
+
+### Knowledge Store
+| Variable | Required | Default | Description |
+|----------|----------|---------|-------------|
+| `DATABASE_URL` | Yes | — | PostgreSQL connection (uses mcp_farm DB) |
+| `OLLAMA_URL` | No | `http://127.0.0.1:11434` | Ollama embedding endpoint |
+| `PORT` | No | `3010` | Server port |

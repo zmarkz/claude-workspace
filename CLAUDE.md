@@ -107,7 +107,14 @@ Every AI query logs routing decisions and results:
 [RESULT]  SIMPLE → Qwen local | STREAMING_MARKDOWN | cost=₹0.00
 ```
 
-View logs: `docker logs -f portfolio_tracker_api 2>&1 | grep "\[ROUTING\]\|\[RESULT\]"`
+View logs: `docker logs -f portfolio_tracker_api 2>&1 | grep "\[ROUTING\]\|\[RESULT\]\|\[SUMMARY\]\|\[INSIGHT\]\|\[FINALIZE\]"`
+
+Additional log patterns from Smart Context Management:
+```
+[SUMMARY]  Session 42 summarized | 2400→350 chars
+[INSIGHT]  Extracted for session 42 | 280 chars
+[FINALIZE] Session 42 finalized | 8 messages → 450 char summary
+```
 
 ### Agent Farm Templates
 
@@ -177,6 +184,7 @@ Use the `keywords` field in each `project.json` to match user requests to the ri
 | Portfolio Tracker Frontend | `./applications/portfolio-tracker-frontend/` | React SPA | React 19, TypeScript, Vite, TailwindCSS, Zustand | — | 5173 | Active |
 | MCP Farm | `./mcp-farm/` | Infrastructure platform | Node.js 18, TypeScript, Fastify v4, MCP SDK, Drizzle ORM, BullMQ | PostgreSQL 15 (`mcp_farm`) | 9080, 8081, 8082 | Active |
 | Admin Nexus | `./applications/admin-nexus/` | React SPA | React 19, TypeScript, Vite, TailwindCSS, Zustand, Recharts | — | 5174 | Active |
+| Knowledge Store | `./knowledge-store/` | RAG + Cache service | Node.js, TypeScript, Fastify, pgvector, Ollama | PostgreSQL 15 (`mcp_farm`) | 3010 | Active |
 | Platform (Orchestration) | `./platform/` | Docker/Deploy/Scripts | Docker Compose, Nginx, Shell scripts | — | — | Active |
 
 **IMPORTANT**: When you create a new project, you MUST update this table. When you remove a project, remove its row.
@@ -193,6 +201,7 @@ When the user asks about something, determine which project it belongs to and wo
   - If about UI, dashboard, components, pages, charts → `./applications/portfolio-tracker-frontend/`
 - **admin, nexus, monitoring, tool explorer, testing console, queue monitor** → `./applications/admin-nexus/`
 - **MCP, gateway, agent farm, tool routing, MCP server** → `./mcp-farm/`
+- **knowledge store, RAG, vector, embedding, semantic search, cache, digest** → `./knowledge-store/`
 - **docker, deploy, compose, nginx, AWS, infrastructure** → `./platform/`
 - **template, scaffold, new app** → See "New App Creation" below
 
@@ -481,6 +490,7 @@ docker compose down -v
 | 8081 | MCP Gateway (MCP Protocol) |
 | 8082 | Agent Farm |
 | 3004 | Portfolio Tracker MCP Server |
+| 3010 | Knowledge Store (RAG + cache) |
 | 5174 | Admin Nexus |
 
 **Note on port conflicts**: Portfolio Tracker API and MCP Gateway both use 8080 internally. In docker-compose, the MCP Gateway is mapped to host port 9080. Inside the Docker network, services communicate by service name, so there's no conflict.
