@@ -1,9 +1,9 @@
-# Workspace: ~/Documents/claude/
+# Workspace: ~/Documents/Codex/
 
 ## Architecture Reference
 
 Full system architecture documentation is available at:
-- **Markdown**: `docs/ARCHITECTURE.md` (for Claude Code, Cursor, IntelliJ)
+- **Markdown**: `docs/ARCHITECTURE.md` (for Codex, Cursor, IntelliJ)
 - **HTML (visual)**: `docs/architecture.html` (open in Chrome for dark-themed interactive view)
 - **Admin Setup**: `docs/ADMIN_SETUP.md` (keys, costs, manual config steps)
 - **Test Cases**: `docs/TEST_CASES.md` (manual testing guide)
@@ -24,7 +24,7 @@ Application (backend)
   │
   ├── classifyQuery(message) → COMPLEX or SIMPLE
   │
-  ├── COMPLEX → Agent Farm Template 3 (Claude Sonnet)
+  ├── COMPLEX → Agent Farm Template 3 (Codex Sonnet)
   │              - Portfolio analysis, sell/buy recommendations
   │              - Tax advice, rebalancing, risk assessment
   │              - Output: Structured JSON → frontend renders as cards/tables
@@ -40,7 +40,7 @@ Application (backend)
 ### Query Classification Keywords
 
 ```
-COMPLEX (→ Claude, paid):
+COMPLEX (→ Codex, paid):
   analyze, sell, buy, recommend, rebalance, should I, compare,
   risk, strategy, tax, harvest, what-if, which stock, best, worst,
   portfolio health, deep dive, outlook, forecast, action plan
@@ -49,14 +49,14 @@ SIMPLE (→ Qwen local, free):
   what is, how many, show me, list, allocation, explain, define,
   total value, how much, summary, what does, meaning, sector, count
 
-DEFAULT → COMPLEX (safer, use Claude if unsure)
+DEFAULT → COMPLEX (safer, use Codex if unsure)
 ```
 
 ### Response Formats
 
 | Query Type | Model | SSE Event | Frontend Rendering |
 |------------|-------|-----------|-------------------|
-| COMPLEX | Claude | `event: structured` + JSON | `<StructuredResponse>` — cards, tables, badges |
+| COMPLEX | Codex | `event: structured` + JSON | `<StructuredResponse>` — cards, tables, badges |
 | SIMPLE | Qwen | `event: token` + markdown | `<MarkdownMessage>` — streaming text |
 | Fallback | — | `event: token` + text | `<MarkdownMessage>` — if JSON parse fails |
 
@@ -101,8 +101,8 @@ DEFAULT → COMPLEX (safer, use Claude if unsure)
 
 Every AI query logs routing decisions and results:
 ```
-[ROUTING] query="Analyze portfolio" → COMPLEX → Claude (template 3) | portfolio=1
-[RESULT]  COMPLEX → Claude | 30994ms | 3957chars | ~₹5.05 | JSON_STRUCTURED
+[ROUTING] query="Analyze portfolio" → COMPLEX → Codex (template 3) | portfolio=1
+[RESULT]  COMPLEX → Codex | 30994ms | 3957chars | ~₹5.05 | JSON_STRUCTURED
 [ROUTING] query="How many stocks?" → SIMPLE → Qwen local (template 4)
 [RESULT]  SIMPLE → Qwen local | STREAMING_MARKDOWN | cost=₹0.00
 ```
@@ -120,7 +120,7 @@ Additional log patterns from Smart Context Management:
 
 | ID | Name | Provider | Model | Use Case |
 |----|------|----------|-------|----------|
-| 3 | Portfolio Analyst | anthropic | claude-sonnet-4-6 | Complex analysis (JSON output) |
+| 3 | Portfolio Analyst | anthropic | Codex-sonnet-4-6 | Complex analysis (JSON output) |
 | 4 | Local Portfolio Analyst | ollama | qwen2.5-coder:14b | Simple queries, briefings (free) |
 
 ### When Building New AI Features
@@ -144,9 +144,9 @@ Qwen (template 4, local via Ollama) is also used for:
 ### Cost Optimization
 
 - **93% of queries** go to Qwen local (₹0)
-- **7% of queries** go to Claude (~₹0.03-0.08 each)
+- **7% of queries** go to Codex (~₹0.03-0.08 each)
 - **All document parsing** → Qwen local (₹0)
-- **Monthly cost**: ~₹28 (with smart context) — **85% savings vs direct Claude**
+- **Monthly cost**: ~₹28 (with smart context) — **85% savings vs direct Codex**
 
 ---
 
@@ -159,7 +159,7 @@ You are working in a multi-project workspace. This directory contains multiple i
 ## Directory Layout
 
 ```
-~/Documents/claude/
+~/Documents/Codex/
 ├── applications/               ← ALL business applications live here
 │   ├── portfolio-tracker/      ← Spring Boot API
 │   ├── portfolio-tracker-frontend/  ← React SPA
@@ -167,7 +167,7 @@ You are working in a multi-project workspace. This directory contains multiple i
 ├── mcp-farm/                   ← MCP gateway + agent farm infrastructure
 ├── platform/                   ← Docker Compose, Nginx, deployment scripts
 ├── project-templates/          ← Scaffolding templates (not runnable projects)
-└── CLAUDE.md                   ← This file
+└── AGENTS.md                   ← This file
 ```
 
 **Rule**: Every new business application goes into `applications/{app-name}/`. Infrastructure services (MCP farm, etc.) live at the top level. Platform orchestration stays in `platform/`.
@@ -180,9 +180,9 @@ Each project has a `project.json` at its root. To discover all projects dynamica
 
 ```bash
 # Top-level projects
-for f in ~/Documents/claude/*/project.json; do echo "---"; cat "$f"; done
+for f in ~/Documents/Codex/*/project.json; do echo "---"; cat "$f"; done
 # Applications under applications/
-for f in ~/Documents/claude/applications/*/project.json; do echo "---"; cat "$f"; done
+for f in ~/Documents/Codex/applications/*/project.json; do echo "---"; cat "$f"; done
 ```
 
 Use the `keywords` field in each `project.json` to match user requests to the right project. Below is the current registry (keep this updated when creating or removing projects):
@@ -230,13 +230,13 @@ Some tasks span projects (e.g., "add a new API endpoint and update the frontend"
 
 ---
 
-## Per-Project CLAUDE.md — Convention
+## Per-Project AGENTS.md — Convention
 
-Every project MUST have its own `CLAUDE.md` at its root. When working inside a project directory, read BOTH this root file AND the project's own `CLAUDE.md`.
+Every project MUST have its own `AGENTS.md` at its root. When working inside a project directory, read BOTH this root file AND the project's own `AGENTS.md`.
 
-### What goes in a per-project CLAUDE.md
+### What goes in a per-project AGENTS.md
 
-Every project's CLAUDE.md MUST contain these sections (use this as a template):
+Every project's AGENTS.md MUST contain these sections (use this as a template):
 
 ```markdown
 # {Project Name}
@@ -292,12 +292,12 @@ Quick reference for frequent operations:
 - How to build for production
 ```
 
-### Rules for maintaining per-project CLAUDE.md
-- When you add new endpoints, update the CLAUDE.md
-- When you add new environment variables, update the CLAUDE.md
-- When you change the database schema, update the CLAUDE.md
+### Rules for maintaining per-project AGENTS.md
+- When you add new endpoints, update the AGENTS.md
+- When you add new environment variables, update the AGENTS.md
+- When you change the database schema, update the AGENTS.md
 - When you add significant new features, update the Overview
-- Keep it accurate — an outdated CLAUDE.md is worse than none
+- Keep it accurate — an outdated AGENTS.md is worse than none
 
 ---
 
@@ -344,12 +344,12 @@ Before writing any code, clarify:
 
 ### Step 2: Scaffold the Project
 ```bash
-mkdir ~/Documents/claude/applications/{app-name}
-cd ~/Documents/claude/applications/{app-name}
+mkdir ~/Documents/Codex/applications/{app-name}
+cd ~/Documents/Codex/applications/{app-name}
 git init
 ```
 
-Choose the appropriate template from `~/Documents/claude/project-templates/`:
+Choose the appropriate template from `~/Documents/Codex/project-templates/`:
 - `spring-boot-api/` — Java backend with Spring Boot, JPA, security
 - `node-api/` — Node.js/TypeScript backend with Fastify, Drizzle ORM
 - `react-frontend/` — React SPA with TypeScript, Vite, TailwindCSS
@@ -361,10 +361,10 @@ Copy the template contents and adapt:
 - Remove any template-specific placeholder code
 
 ### Step 3: Create project.json
-Create `~/Documents/claude/applications/{app-name}/project.json` following the convention above.
+Create `~/Documents/Codex/applications/{app-name}/project.json` following the convention above.
 
-### Step 4: Create per-project CLAUDE.md
-Create `~/Documents/claude/applications/{app-name}/CLAUDE.md` following the template in the "Per-Project CLAUDE.md" section above. Fill in ALL sections — do not leave placeholders.
+### Step 4: Create per-project AGENTS.md
+Create `~/Documents/Codex/applications/{app-name}/AGENTS.md` following the template in the "Per-Project AGENTS.md" section above. Fill in ALL sections — do not leave placeholders.
 
 ### Step 5: Create Dockerfile
 Create a production-ready Dockerfile in the project root. Follow the patterns from existing projects:
@@ -374,32 +374,32 @@ Create a production-ready Dockerfile in the project root. Follow the patterns fr
 - Proper .dockerignore
 
 ### Step 6: Wire into Platform
-Update `~/Documents/claude/platform/docker-compose.yml`:
+Update `~/Documents/Codex/platform/docker-compose.yml`:
 - Add the new service with `context: ../applications/{app-name}`
 - Set `DATABASE_URL` or equivalent env vars pointing to the shared database
 - Set correct `depends_on` with health checks
 - Expose the correct port
 
-Update `~/Documents/claude/platform/scripts/init-databases.sql` (MySQL) or `init-databases-pg.sql` (PostgreSQL):
+Update `~/Documents/Codex/platform/scripts/init-databases.sql` (MySQL) or `init-databases-pg.sql` (PostgreSQL):
 - Add `CREATE DATABASE IF NOT EXISTS {app_database};`
 
 If the app needs MCP gateway access, also:
 - Register it as a consumer in the MCP gateway seed script
 - Create subscriptions for the MCPs it needs
 
-### Step 7: Update Root CLAUDE.md
+### Step 7: Update Root AGENTS.md
 Update the **Project Registry table** in THIS file with the new project's details.
 
 ### Step 8: Initial Commit
 ```bash
-cd ~/Documents/claude/applications/{app-name}
+cd ~/Documents/Codex/applications/{app-name}
 git add .
 git commit -m "feat: initial scaffold for {app-name}"
 ```
 
 ### Step 9: Build and Verify
 ```bash
-cd ~/Documents/claude/platform
+cd ~/Documents/Codex/platform
 docker compose build {service-name}
 docker compose up {service-name}
 # Verify it starts, connects to DB, and responds on its port
@@ -408,11 +408,11 @@ docker compose up {service-name}
 ### Step 10: Self-Check
 Before reporting to the user that the new app is ready, verify:
 - [ ] `project.json` exists and is complete
-- [ ] `CLAUDE.md` exists and all sections are filled
+- [ ] `AGENTS.md` exists and all sections are filled
 - [ ] `Dockerfile` exists and builds successfully
 - [ ] Service is in `platform/docker-compose.yml`
 - [ ] Database is in `platform/scripts/init-databases.sql` or `init-databases-pg.sql`
-- [ ] Root `CLAUDE.md` project registry table is updated
+- [ ] Root `AGENTS.md` project registry table is updated
 - [ ] Git repo is initialized with initial commit
 - [ ] App starts and responds to health check
 
@@ -441,7 +441,7 @@ Connection patterns from host (for IDE/tools):
 ### Adding a New Database
 1. Add `CREATE DATABASE IF NOT EXISTS {name};` to `platform/scripts/init-databases.sql` (MySQL) or `platform/scripts/init-databases-pg.sql` (PostgreSQL)
 2. Add the connection env var to the service in `docker-compose.yml`
-3. Document it in the project's `CLAUDE.md`
+3. Document it in the project's `AGENTS.md`
 
 ---
 
@@ -449,7 +449,7 @@ Connection patterns from host (for IDE/tools):
 
 ### Starting Services
 ```bash
-cd ~/Documents/claude/platform
+cd ~/Documents/Codex/platform
 
 # Start everything
 docker compose up -d
@@ -519,7 +519,7 @@ docker compose down -v
 
 ### Deploy Workflow
 ```bash
-cd ~/Documents/claude/platform
+cd ~/Documents/Codex/platform
 ./scripts/deploy.sh
 ```
 
@@ -557,7 +557,7 @@ docker compose -f docker-compose.yml -f docker-compose.proxy.yml up -d
 
 ### Repository Structure
 - Each project is its own git repo with its own `.git/`
-- The parent `~/Documents/claude/` will transition away from being a single git repo
+- The parent `~/Documents/Codex/` will transition away from being a single git repo
 - Each new project gets `git init` at creation
 - `platform/` is its own git repo
 
@@ -572,28 +572,28 @@ Use conventional commits:
 
 ---
 
-## Claude Code Workflow
+## Codex Workflow
 
 ### Working on a Specific Project
 When the user's request maps to a specific project:
-1. Read this root CLAUDE.md (you're doing that now)
+1. Read this root AGENTS.md (you're doing that now)
 2. Navigate to the project directory (under `applications/` for business apps)
-3. Read the project's own CLAUDE.md
+3. Read the project's own AGENTS.md
 4. Read `project.json` for metadata
 5. Do the work within that project's directory
-6. Update the project's CLAUDE.md if you changed anything significant
+6. Update the project's AGENTS.md if you changed anything significant
 
 ### Working Across Projects
 When the task spans multiple projects:
 1. Plan the changes for each project first
 2. Execute backend changes first, then frontend, then platform
 3. Test each layer before moving to the next
-4. Update all affected CLAUDE.md files
+4. Update all affected AGENTS.md files
 
-### Monitoring (Claude Remote)
+### Monitoring (Codex Remote)
 When monitoring the system remotely:
 ```bash
-cd ~/Documents/claude/platform
+cd ~/Documents/Codex/platform
 docker compose ps                          # check container health
 docker compose logs --tail=50 {service}    # recent logs
 ```
@@ -602,7 +602,7 @@ docker compose logs --tail=50 {service}    # recent logs
 
 ## Template Usage Guidelines
 
-Templates live in `~/Documents/claude/project-templates/`. They are NOT git repos — they are scaffolding that gets copied into new project directories.
+Templates live in `~/Documents/Codex/project-templates/`. They are NOT git repos — they are scaffolding that gets copied into new project directories.
 
 ### Available Templates
 
@@ -625,7 +625,7 @@ Templates live in `~/Documents/claude/project-templates/`. They are NOT git repo
 
 1. **Never hardcode secrets.** Always use environment variables.
 2. **Always create Dockerfiles** for new projects, even if running locally without Docker initially.
-3. **Always update documentation** — root CLAUDE.md, project CLAUDE.md, project.json.
+3. **Always update documentation** — root AGENTS.md, project AGENTS.md, project.json.
 4. **Test in Docker** before considering a feature done. The Docker environment is the source of truth.
 5. **Keep port mappings updated** in the Port Map table above when adding new services.
 6. **Separate repos** — when creating a new project, always `git init` it as its own repo.
@@ -635,7 +635,7 @@ Templates live in `~/Documents/claude/project-templates/`. They are NOT git repo
 
 ## gstack
 
-gstack is installed at `~/.claude/skills/gstack`. Use its skills in this repo for the workflows they cover.
+gstack is installed at `~/.Codex/skills/gstack`. Use its skills in this repo for the workflows they cover.
 
 - Use the `/browse` skill from gstack for all web browsing. Never use `mcp__claude-in-chrome__*` tools.
 

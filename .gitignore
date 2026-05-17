@@ -30,3 +30,4 @@ project-templates/**/target/
 project-templates/**/dist/
 
 *storybook.log
+.gstack/

@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<script type="application/json" id="cowork-artifact-meta">
+{
+  "name": "Aife Daily Top 10",
+  "schemaVersion": 1,
+  "description": "Today's Top 10 Video Ideas board for the AI-First Engineering channel — date-tagged, color-coded by pillar, expandable for hook/structure/shorts/monetization. Refresh by asking the assistant to \"regenerate today's top 10 video ideas.\""
+}
+</script>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>AI-First Engineering — Today's Top 10</title>
+<style>
+:root { color-scheme: light; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Inter', system-ui, sans-serif;
+  background: #FAFAF9;
+  color: #1C1917;
+  padding: 28px 24px;
+  line-height: 1.5;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.brand {
+  display: flex; align-items: baseline; gap: 12px;
+  margin-bottom: 4px;
+}
+.brand .logo {
+  background: #0E0E10; color: #FFFFFF;
+  font-weight: 900; letter-spacing: 0.5px;
+  padding: 4px 10px; border-radius: 4px;
+  font-size: 14px;
+}
+.brand .tag {
+  color: #22C55E; font-weight: 600; font-size: 13px;
+}
+h1 {
+  font-size: 28px; font-weight: 800; margin-top: 12px;
+  letter-spacing: -0.5px;
+}
+.sub {
+  color: #57534E; font-size: 14px; margin-bottom: 20px;
+  display: flex; gap: 16px; flex-wrap: wrap;
+}
+.sub .date { font-weight: 600; color: #1C1917; }
+.refresh-cta {
+  background: #0E0E10; color: white; padding: 10px 14px; border-radius: 8px;
+  font-size: 13px; margin-bottom: 24px; display: flex;
+  justify-content: space-between; align-items: center; gap: 12px;
+}
+.refresh-cta button {
+  background: #22C55E; color: #0E0E10; border: none; padding: 8px 14px;
+  border-radius: 6px; font-weight: 700; font-size: 12px; cursor: pointer;
+  font-family: inherit;
+}
+.refresh-cta button:hover { background: #16A34A; }
+.legend {
+  display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 16px;
+  font-size: 12px;
+}
+.pill {
+  padding: 3px 8px; border-radius: 999px; font-weight: 600;
+  white-space: nowrap;
+}
+.pill-build    { background: #DCFCE7; color: #166534; }
+.pill-decide   { background: #DBEAFE; color: #1E40AF; }
+.pill-defend   { background: #FEE2E2; color: #991B1B; }
+.pill-career   { background: #FEF3C7; color: #92400E; }
+.pill-look     { background: #F3E8FF; color: #6B21A8; }
+.idea {
+  background: white; border: 1px solid #E7E5E4; border-radius: 12px;
+  padding: 18px 20px; margin-bottom: 12px;
+  transition: all 0.15s ease;
+}
+.idea:hover { border-color: #22C55E; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(34,197,94,0.08); }
+.idea-head { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; cursor: pointer; }
+.rank {
+  width: 28px; height: 28px; flex-shrink: 0;
+  background: #0E0E10; color: white;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 50%; font-weight: 800; font-size: 13px;
+}
+.title { font-weight: 700; font-size: 16px; flex: 1; line-height: 1.35; }
+.chev { font-size: 12px; color: #57534E; transition: transform 0.2s; }
+.idea.open .chev { transform: rotate(90deg); }
+.meta { display: flex; gap: 8px; flex-wrap: wrap; font-size: 12px; margin-bottom: 4px; padding-left: 38px; }
+.meta-item { color: #57534E; }
+.meta-item b { color: #1C1917; }
+.body { display: none; padding-left: 38px; padding-top: 12px; padding-bottom: 4px; font-size: 14px; }
+.idea.open .body { display: block; }
+.body h4 {
+  font-size: 11px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 0.5px; color: #57534E; margin-top: 12px; margin-bottom: 4px;
+}
+.body h4:first-child { margin-top: 0; }
+.body p, .body ul { font-size: 13px; line-height: 1.55; color: #1C1917; }
+.body ul { padding-left: 18px; }
+.body em { color: #16A34A; font-style: normal; font-weight: 600; }
+.foot {
+  margin-top: 24px; padding-top: 16px; border-top: 1px solid #E7E5E4;
+  font-size: 12px; color: #57534E; display: flex; gap: 14px; flex-wrap: wrap;
+}
+.foot a { color: #16A34A; text-decoration: none; font-weight: 600; }
+.kpi {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
+  margin-bottom: 16px;
+}
+.kpi-card {
+  background: white; border: 1px solid #E7E5E4; border-radius: 10px;
+  padding: 10px 12px;
+}
+.kpi-card .label { font-size: 11px; color: #57534E; text-transform: uppercase; letter-spacing: 0.4px; font-weight: 600; }
+.kpi-card .val { font-size: 18px; font-weight: 800; margin-top: 2px; }
+.kpi-card .delta { font-size: 11px; color: #16A34A; font-weight: 600; }
+@media (max-width: 640px) {
+  .kpi { grid-template-columns: repeat(2, 1fr); }
+}
+</style>
+</head>
+<body>
+
+<div class="brand">
+  <span class="logo">AI-FIRST ENGINEERING</span>
+  <span class="tag">Systems &gt; Hype.</span>
+</div>
+
+<h1>Today's Top 10 Video Ideas</h1>
+<div class="sub">
+  <span class="date" id="today-date">Friday, May 1, 2026</span>
+  <span>·</span>
+  <span>Ranked for authority + algo signal + monetization</span>
+</div>
+
+<div class="kpi">
+  <div class="kpi-card"><div class="label">Day</div><div class="val">1</div><div class="delta">of 90-day plan</div></div>
+  <div class="kpi-card"><div class="label">Cadence</div><div class="val">2 + 5</div><div class="delta">longs · shorts / week</div></div>
+  <div class="kpi-card"><div class="label">Pillar mix</div><div class="val">B / D / D</div><div class="delta">Build · Decide · Defend</div></div>
+  <div class="kpi-card"><div class="label">North star</div><div class="val">45%</div><div class="delta">avg view duration target</div></div>
+</div>
+
+<div class="refresh-cta">
+  <span>Want fresh ideas tomorrow morning? Ask the assistant to <b>regenerate today's top 10</b>.</span>
+  <button onclick="sendPrompt('Regenerate today\\'s top 10 video ideas for the AI-First Engineering channel — pull current 2026 trend signals and update the daily-ideas artifact.')">Regenerate</button>
+</div>
+
+<div class="legend">
+  <span class="pill pill-build">Build</span>
+  <span class="pill pill-decide">Decide</span>
+  <span class="pill pill-defend">Defend</span>
+  <span class="pill pill-career">Career</span>
+  <span class="pill pill-look">Look ahead</span>
+</div>
+
+<div id="ideas"></div>
+
+<div class="foot">
+  <span><b>Files:</b> 00_STRATEGY_MASTER.md · 30_DAY_CALENDAR.xlsx · 03_FIRST_10_SCRIPTS.md · 04_TITLES_AND_SHORTS.md · 05_PRODUCTION_WORKFLOW_AGENTS_GEAR.md</span>
+</div>
+
+<script>
+const ideas = [
+  {
+    rank: 1,
+    title: "I gave Claude Code my fintech repo for 7 days. Here's what broke.",
+    pillar: "Build/Defend",
+    pillarClass: "build",
+    why: "Claude Code at 12.5% market share, real-world failure data is gold; failure-confessional outperforms wins on retention.",
+    audience: "AI-anxious senior dev + startup CTO",
+    hook: "Last month I let Claude Code touch our payments repo for one week. It saved 14 hours and opened a vulnerability that would have failed our SOC2 audit.",
+    thumb: "Claude Code · 7 days in fintech",
+    structure: ["Hook + receipts", "Setup", "Win 1 — flaky retry refactor", "Win 2 — eval harness scaffold", "Fail 1 — auth scope leak", "Fail 2 — cost overshoot", "7 guardrails I now run", "What I'll let an agent do tomorrow vs. never", "CTA: free guardrail playbook"],
+    shorts: ["Auth-scope failure", "$317 cost confession", "CI guardrail snippet", "What AI should never touch"],
+    money: "Newsletter signup → playbook PDF → community waitlist",
+    diff: "Medium",
+    impact: "Very high — anchor video"
+  },
+  {
+    rank: 2,
+    title: "Cursor vs Claude Code vs Codex after 90 days at a 200-engineer company",
+    pillar: "Decide",
+    pillarClass: "decide",
+    why: "AI-IDE market shift in 2026; people search this weekly; receipts at scale beats solo-dev anecdote.",
+    audience: "EM, staff, CTO",
+    hook: "Most comparison videos test these for 30 minutes. We ran all three for 90 days across 200 engineers. The winner surprised us.",
+    thumb: "90 days · 3 IDEs · 1 winner",
+    structure: ["Test setup + cohort split", "PR throughput numbers", "Defect-escape rate delta", "Cost per engineer/month", "Engineer satisfaction at 12 weeks", "What each tool wins at", "What we kept"],
+    shorts: ["Refactor winner", "Greenfield winner", "Ops winner", "Cost-per-seat chart", "The 'we banned' moment"],
+    money: "AI-IDE adoption playbook PDF",
+    diff: "Medium",
+    impact: "High — definitive video"
+  },
+  {
+    rank: 3,
+    title: "The EU AI Act for engineers — what actually changes in your CI pipeline",
+    pillar: "Defend",
+    pillarClass: "defend",
+    why: "EU AI Act fully in force 2026, lawyers wrote everything, engineers searching for concrete steps.",
+    audience: "Platform/security lead + EM",
+    hook: "The EU AI Act is now law. Forget the lawyers. Here are the 7 things in your CI pipeline that will break next month if you ignore it.",
+    thumb: "EU AI Act → your CI",
+    structure: ["The Act in 4 sentences", "7 concrete pipeline changes", "Policy as code example", "How to log model usage for audit", "Traceability table", "What to tell your CISO"],
+    shorts: ["7-item checklist as 7 separate shorts"],
+    money: "AI Act CI checklist PDF (high-conversion lead magnet)",
+    diff: "Medium-high",
+    impact: "High — durable evergreen"
+  },
+  {
+    rank: 4,
+    title: "I built an AI agent that does our oncall triage. We rolled it back.",
+    pillar: "Build/Defend",
+    pillarClass: "build",
+    why: "Agentic SRE is a 2026 boom; almost no failure post-mortems exist publicly.",
+    audience: "SRE, devops, EM",
+    hook: "We deployed an AI agent to triage our PagerDuty alerts. Within 9 days it routed a SEV2 to the wrong team. Here's the post-mortem and the rebuild.",
+    thumb: "Agent SRE · The rollback",
+    structure: ["Architecture (LangGraph + OTel)", "Eval harness", "What we got right", "The failure", "The eval gap", "The rebuild", "What I'd build first today"],
+    shorts: ["Architecture diagram", "The eval gate that would've caught it", "The prompt that drifted"],
+    money: "Community ('see the full repo inside')",
+    diff: "High",
+    impact: "Very high — career-defining"
+  },
+  {
+    rank: 5,
+    title: "Local LLMs in production at a regulated company — what changed in 2026",
+    pillar: "Build/Defend",
+    pillarClass: "build",
+    why: "Llama 4 / Qwen 3 / Mistral Large 2 are good enough; banks asking; regulated India = unique angle.",
+    audience: "Enterprise platform lead, CTO of regulated co.",
+    hook: "Two years ago, running an LLM on-prem was a science fair. Today it's the only way some of us can ship. Here's what changed.",
+    thumb: "Local LLMs · 2026 stack",
+    structure: ["What changed", "Cost crossover chart", "The full stack (vLLM, LiteLLM, Langfuse)", "5 use cases that work", "3 that don't", "What I'd deploy tomorrow"],
+    shorts: ["Throughput chart", "API vs on-prem cost reveal", "Eval harness", "Use cases that fail"],
+    money: "Community + enterprise workshop seed",
+    diff: "High",
+    impact: "Very high — moats you in regulated India"
+  },
+  {
+    rank: 6,
+    title: "How a senior engineer becomes irreplaceable in the AI era",
+    pillar: "Career",
+    pillarClass: "career",
+    why: "Q1 2026 layoffs at 80K (48% AI-attributed); fear is the #1 emotion; nobody serves it with substance.",
+    audience: "AI-anxious senior dev (the cohort buyer)",
+    hook: "In 2026 a junior engineer with Cursor is faster than half the seniors I know. So what do you do? Here's the move I made — and the move I'd make again.",
+    thumb: "Senior dev · Survival",
+    structure: ["The bimodal threat", "4 leverage moves (eval, infra, security, leadership)", "90-day plan", "Counter-examples that don't work"],
+    shorts: ["'Do this not that'", "The 4 moves", "30-day plan extracted"],
+    money: "Direct cohort waitlist sales video",
+    diff: "Medium",
+    impact: "Very high — emotional + actionable"
+  },
+  {
+    rank: 7,
+    title: "Our AI-augmented PR pipeline — every guardrail we run before merge",
+    pillar: "Build",
+    pillarClass: "build",
+    why: "AI code is 1.7x more bug-prone than human code; teams searching for concrete guardrails.",
+    audience: "Staff/principal engineers, platform leads",
+    hook: "We ship 80–120 PRs a week. About 60% are touched by an AI agent. Here is every guardrail that runs before merge — and the one that catches the most bugs.",
+    thumb: "PR pipeline · 5 guardrails",
+    structure: ["Pipeline overview", "Pre-commit AI lint", "Eval harness", "Security + IAM diff gate", "Cost regression", "AI-output filter", "The one that catches the most"],
+    shorts: ["The 'one regex that saved us'", "Eval harness sample", "Diff filter"],
+    money: "Community + 'AI PR guardrail templates' download",
+    diff: "Medium-high",
+    impact: "High — reusable artifact"
+  },
+  {
+    rank: 8,
+    title: "I migrated my team from Copilot to Cursor to Claude Code. Don't make my mistakes.",
+    pillar: "Decide",
+    pillarClass: "decide",
+    why: "AI-IDE migration is a peer-to-peer trust topic; EMs searching weekly.",
+    audience: "EM, staff",
+    hook: "In 14 months I migrated our team across three AI coding tools. Two migrations were waste. Here's the framework I use now.",
+    thumb: "3 IDEs · 14 months · 2 mistakes",
+    structure: ["The migrations", "Why migration #2 failed", "6-criterion scorecard", "Rollout playbook", "Rollback plan"],
+    shorts: ["The scorecard", "'Do not migrate' signs", "Cost shock"],
+    money: "EM-targeted migration playbook PDF",
+    diff: "Low-medium",
+    impact: "High — peer-to-peer trust"
+  },
+  {
+    rank: 9,
+    title: "The 9 AI agents I run inside my engineering org (and the 4 I killed)",
+    pillar: "Build",
+    pillarClass: "build",
+    why: "Operator inventory beats every 'top 10 agent' listicle; content multiplier (each surviving agent is a free short).",
+    audience: "Staff+, EM, CTO",
+    hook: "Most agent ideas inside engineering orgs die quiet deaths. Here are the 9 I kept and the 4 I killed before they hurt us.",
+    thumb: "9 kept · 4 killed",
+    structure: ["The 9 keepers (30s each)", "The 4 killed", "The kill criteria", "Architecture for 'good agents'", "Governance"],
+    shorts: ["9 free shorts — one per surviving agent"],
+    money: "'Agent inventory template' PDF",
+    diff: "Medium",
+    impact: "Very high — content multiplier"
+  },
+  {
+    rank: 10,
+    title: "The cost of being AI-late: a 2026 reality check for engineering leaders",
+    pillar: "Career/Decide",
+    pillarClass: "career",
+    why: "Manager segment is highest LTV (workshops + cohorts); layoff fear concentrated at this level.",
+    audience: "EMs, directors, VPs of eng",
+    hook: "Three peers of mine lost their head-of-eng role this year. Two were excellent engineers. Here's what they had in common — and the 6 questions I now ask in every 1:1.",
+    thumb: "AI-late · The 6 questions",
+    structure: ["Market reality (cite layoff data)", "The 'AI-late' pattern", "6 manager 1:1 questions", "30-60-90 fix", "What to tell your CTO"],
+    shorts: ["The 6 questions", "Layoff data short", "30-60-90 plan"],
+    money: "EM track of cohort + enterprise workshop pipeline",
+    diff: "Low-medium",
+    impact: "Very high — reaches workshop buyers"
+  }
+];
+
+const root = document.getElementById('ideas');
+ideas.forEach(i => {
+  const div = document.createElement('div');
+  div.className = 'idea';
+  div.innerHTML = `
+    <div class="idea-head" onclick="this.parentElement.classList.toggle('open')">
+      <div class="rank">${i.rank}</div>
+      <div class="title">${i.title}</div>
+      <span class="chev">▶</span>
+    </div>
+    <div class="meta">
+      <span class="pill pill-${i.pillarClass}">${i.pillar}</span>
+      <span class="meta-item"><b>For:</b> ${i.audience}</span>
+      <span class="meta-item"><b>Difficulty:</b> ${i.diff}</span>
+      <span class="meta-item"><b>Impact:</b> ${i.impact}</span>
+    </div>
+    <div class="body">
+      <h4>Why now</h4>
+      <p>${i.why}</p>
+      <h4>Hook (0–10s)</h4>
+      <p><em>${i.hook}</em></p>
+      <h4>Thumbnail text</h4>
+      <p>${i.thumb}</p>
+      <h4>Structure</h4>
+      <ul>${i.structure.map(s => `<li>${s}</li>`).join('')}</ul>
+      <h4>Shorts to extract</h4>
+      <ul>${i.shorts.map(s => `<li>${s}</li>`).join('')}</ul>
+      <h4>Monetization</h4>
+      <p>${i.money}</p>
+    </div>
+  `;
+  root.appendChild(div);
+});
+
+// Auto-update date label on open
+const d = new Date();
+const opts = { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' };
+try {
+  document.getElementById('today-date').textContent = d.toLocaleDateString('en-US', opts);
+} catch(e) {}
+
+// Open the top idea by default
+document.querySelector('.idea').classList.add('open');
+</script>
+
+</body>
+</html>

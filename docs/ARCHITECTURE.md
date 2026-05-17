@@ -1,6 +1,6 @@
 # Portfolio Intelligence Platform — Architecture
 
-> **Last updated**: 2026-04-06 | **Version**: 4.0 | **Author**: Claude Code + Markandey Singh
+> **Last updated**: 2026-04-08 | **Version**: 5.0 | **Author**: Claude Code + Markandey Singh
 
 ---
 
@@ -10,18 +10,18 @@ An AI-first personal finance advisor for Indian retail investors. Multi-broker, 
 
 | Metric | Value |
 |--------|-------|
-| Applications | 6 (2 SPAs, 1 API, 1 Gateway, 1 Orchestrator, 1 RAG Service) |
+| Applications | 7 (3 SPAs, 1 API, 1 Gateway, 1 Orchestrator, 1 RAG Service) |
 | MySQL Tables | 25+ (business data) |
-| PostgreSQL Tables | 7 (MCP infrastructure) |
+| PostgreSQL Tables | 10 (MCP infrastructure + vectors + cache) |
 | MCP Servers | 5 (portfolio, web-search, aws, atlassian, knowledge-store) |
 | MCP Tools | 20 registered |
-| Agent Templates | 6 |
+| Agent Templates | 6 (4 Claude, 2 Qwen local) |
 | Supported Brokers | 7 (Zerodha, Upstox, Angel One, 5paisa, ICICI Direct, Groww, Paytm Money) |
-| Data Import | CDSL CAS, NSDL CAS, MFCentral, Broker CSV, Form 16, 26AS, AIS |
+| Data Import | CDSL CAS, NSDL CAS, MFCentral, Broker CSV, Form 16, 26AS, AIS, Salary Slip |
 | Languages | Java 23, TypeScript 5.9 |
-| Databases | MySQL 8 (business), PostgreSQL 15 (infra), Redis 7 (queue) |
+| Databases | MySQL 8 (business), PostgreSQL 15 + pgvector (infra), Redis 7 (queue) |
 | API Endpoints | 85+ REST + 1 WebSocket + 2 MCP protocol |
-| Frontend Pages | 13 (+ login) |
+| Frontend Pages | 12 (+ login) |
 | Scheduled Jobs | 3 (performance 4:30PM, tax harvest Sat 9AM, briefing 6AM) |
 
 ### Test User
@@ -53,6 +53,7 @@ An AI-first personal finance advisor for Indian retail investors. Multi-broker, 
                                 │  /admin/* → Admin SPA(:5174)
                                 │  /gateway → MCP GW   (:9080)
                                 │  /agent   → Agent Farm(:8082)
+                                │  /me      → markandey.in(:5175)
                                 └──┬──┬──┬──┬──┘
                ┌───────────────────┘  │  │  └──────────────────┐
                │                      │  │                     │
@@ -121,6 +122,8 @@ An AI-first personal finance advisor for Indian retail investors. Multi-broker, 
 | 10 | MySQL | Database | MySQL 8.0 | 3306 | Host | Business data |
 | 11 | PostgreSQL | Database | PostgreSQL 15 + pgvector | 5432 | Host | MCP metadata + vectors |
 | 12 | Knowledge Store | RAG Service | Node.js, Fastify, pgvector, Ollama | 3010 | `knowledge_store` | Semantic search + cache |
+| 13 | markandey.in | Next.js SSR | Next.js 15, React 19, Tailwind 4, Framer Motion | 5175 | `markandey_in` | Personal website + portfolio |
+| 14 | Cloudflared | Tunnel | Cloudflare Tunnel | — | `cloudflared` | Public access via rakha.xyz |
 
 ---
 
@@ -378,11 +381,28 @@ New Chat → createSession()
 
 **Cost Impact**: Monthly Claude spend ~₹46 → ~₹28 (39% reduction). Qwen calls: ₹0 (local). Embeddings: ₹0 (Ollama).
 
+### Hybrid Document Parsing (Rigid + AI Fallback)
+
+All file uploads use a two-tier approach for maximum reliability:
+
+1. **Rigid parser** tries first — column matching, regex extraction (~100ms)
+2. If <50% success rate → **Qwen AI fallback** (FREE via Ollama, 15-30s) parses semantically
+
+| Document Type | Parser Service | AI Fallback | Output |
+|---------------|---------------|-------------|--------|
+| Holdings CSV/XLSX | `CsvUploadService` | No | PortfolioHolding rows |
+| Tradebook CSV/XLSX | `TradebookParserService` | Yes (Qwen) | TradebookEntry rows |
+| Salary Slip (any format) | `SalarySlipParserService` | Always (Qwen) | IncomeEntry + component JSON |
+| Zerodha Ledger | `LedgerParserService` | No | IncomeEntry (dividends) |
+| P&L Statement | `PnlStatementParserService` | No | Per-stock realized gains |
+| Form 16/26AS/AIS | `DocumentParserService` | No | IncomeEntry rows |
+| CDSL/NSDL CAS | `CdslCasParserService` | No | Holdings + MF holdings |
+
 ---
 
 ## 9. Database Schema
 
-### MySQL — `portfolio` (23 tables)
+### MySQL — `portfolio_tracker` (25+ tables)
 
 ```
 users ─────────┬─── portfolios ──────┬─── portfolio_holdings ──── stocks
@@ -420,7 +440,7 @@ users ─────────┬─── portfolios ──────┬�
 | `chat_history` | user_id, portfolio_id, session_id, role, content | Chat persistence |
 | `approval_requests` | user_id, portfolio_id, status, payload, review_notes | Approval workflow |
 
-### PostgreSQL — `mcp_farm` (10 tables)
+### PostgreSQL — `mcp_farm` (10 tables, including pgvector)
 
 | Table | Purpose |
 |-------|---------|
@@ -462,24 +482,31 @@ users ─────────┬─── portfolios ──────┬�
 
 ## 10. Agent Templates
 
-| ID | Name | Model | MCP Servers | Output |
-|----|------|-------|-------------|--------|
-| 1 | Portfolio Analyst | claude-sonnet-4-6 | portfolio-tracker, web-search | Free-form text |
-| 2 | Research Agent | claude-3.5-sonnet | web-search | Research synthesis |
-| 3 | DevOps Agent | claude-3.5-sonnet | aws, atlassian | Infrastructure |
-| 4 | Portfolio Analysis | claude-sonnet-4-6 | portfolio-tracker, web-search | Structured JSON (healthScore, risks, recommendations) |
-| 5 | Rebalancing Agent | claude-sonnet-4-6 | portfolio-tracker, web-search | JSON array (current/target weights) |
-| 6 | Tax Advisor | claude-sonnet-4-6 | portfolio-tracker | Indian tax optimization |
+| ID | Name | Provider | Model | MCP Servers | Output | Use Case |
+|----|------|----------|-------|-------------|--------|----------|
+| 1 | Portfolio Analyst | anthropic | claude-sonnet-4-6 | portfolio-tracker, web-search | Free-form text | General analysis |
+| 2 | Research Agent | anthropic | claude-3.5-sonnet | web-search | Research synthesis | Web research |
+| 3 | **Portfolio Analyst (COMPLEX)** | **anthropic** | **claude-sonnet-4-6** | portfolio-tracker, web-search | **Structured JSON** | **COMPLEX queries (sell/buy/analyze)** |
+| 4 | **Local Portfolio Analyst (SIMPLE)** | **ollama** | **qwen2.5-coder:14b** | — | **Streaming markdown** | **SIMPLE queries, briefings, summaries (FREE)** |
+| 5 | Rebalancing Agent | anthropic | claude-sonnet-4-6 | portfolio-tracker, web-search | JSON array (current/target weights) | Portfolio rebalancing |
+| 6 | Tax Advisor | anthropic | claude-sonnet-4-6 | portfolio-tracker | Indian tax optimization | Tax planning |
+
+**AI Model Routing**: `AIAnalysisService.classifyQuery()` routes each user message:
+- **COMPLEX** (analyze, sell, buy, recommend, rebalance, risk, tax, harvest) → Template 3 (Claude, ~₹0.03-0.08/call)
+- **SIMPLE** (what is, how many, show me, list, explain, summary) → Template 4 (Qwen local, ₹0/call)
+- **DEFAULT** → COMPLEX (safer fallback)
+- **~93% of queries** go to Qwen local (free), **~7%** to Claude
 
 ---
 
-## 11. API Endpoint Map (30+ endpoints)
+## 11. API Endpoint Map (85+ endpoints)
 
 ### Auth (Public)
 | Method | Path | Description |
 |--------|------|-------------|
 | POST | `/api/auth/register` | Register new user |
 | POST | `/api/auth/login` | Login → JWT token |
+| POST | `/api/auth/google` | Google OAuth sign-in (validates ID token, creates/links account) |
 
 ### Portfolio Management
 | Method | Path | Description |
@@ -496,25 +523,23 @@ users ─────────┬─── portfolios ──────┬�
 ### Stocks
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/stocks/search` | Search stocks |
-| GET | `/api/stocks/{symbol}/price` | Current price |
-| GET | `/api/stocks/{symbol}/analysis` | Technical indicators |
+| GET | `/api/stocks` | List/search stocks |
+| GET | `/api/stocks/{id}` | Get stock details |
+| GET | `/api/stocks/{id}/history` | Price history |
 
 ### Transactions
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/portfolios/{id}/transactions` | Transaction history |
-| POST | `/api/transactions` | Execute buy/sell |
+| GET | `/api/transactions` | List transactions |
+| POST | `/api/transactions` | Record transaction |
+| POST | `/api/transactions/upload` | Upload CSV/XLSX |
 
 ### AI Analysis (Ownership Protected)
 | Method | Path | Description |
 |--------|------|-------------|
 | POST | `/api/ai/portfolio/{id}/analyze` | Full AI analysis |
-| POST | `/api/ai/portfolio/{id}/chat` | Chat (SSE streaming) |
+| POST | `/api/ai/portfolio/{id}/chat` | Chat (SSE streaming, COMPLEX/SIMPLE routing) |
 | GET | `/api/ai/portfolio/{id}/rebalance` | Rebalancing suggestions |
-| GET | `/api/ai/portfolio/{id}/chat/history` | Chat history |
-| POST | `/api/ai/portfolio/{id}/chat/history` | Save chat |
-| DELETE | `/api/ai/portfolio/{id}/chat/history` | Clear chat |
 | GET | `/api/ai/portfolio/{id}/analysis/history` | Analysis history |
 | GET | `/api/ai/portfolio/{id}/analysis/latest` | Latest analysis |
 | GET | `/api/ai/portfolio/{id}/rebalancing/history` | Rebalancing history |
@@ -523,21 +548,102 @@ users ─────────┬─── portfolios ──────┬�
 | GET | `/api/ai/portfolio/{pid}/stock/{symbol}` | Stock recommendation |
 | GET | `/api/ai/status` | AI config status |
 
-### Tax & Tradebook (NEW)
+### Chat Sessions
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/tax/{fy}/summary` | Capital gains tax summary |
-| POST | `/api/tax/tradebook/upload` | Upload Kite tradebook CSV |
+| POST | `/api/ai/portfolio/{id}/chat/sessions` | Create new chat session |
+| GET | `/api/ai/portfolio/{id}/chat/sessions` | List sessions (newest first) |
+| GET | `/api/ai/portfolio/{id}/chat/sessions/{sid}/messages` | Get session messages |
+| PUT | `/api/ai/portfolio/{id}/chat/sessions/{sid}` | Update session title |
+| POST | `/api/ai/portfolio/{id}/chat/sessions/{sid}/finalize` | Finalize session (summary → Knowledge Store) |
+| GET | `/api/ai/portfolio/{id}/chat/history` | Get all chat history (flat, backward-compat) |
+| POST | `/api/ai/portfolio/{id}/chat/history` | Save chat pair (supports optional sessionId) |
+| DELETE | `/api/ai/portfolio/{id}/chat/history` | Clear chat |
+
+### Tax & Tradebook
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/tax/{fy}/summary` | Capital gains tax summary (LTCG/STCG, FIFO) |
+| GET | `/api/tax/{fy}/opportunities` | Computed tax-saving suggestions (LTCG exemption, 80C, harvesting) |
+| GET | `/api/tax/{fy}/regime-comparison` | Compare Old vs New tax regime based on salary data |
+| POST | `/api/tax/tradebook/upload` | Upload tradebook CSV/XLSX (hybrid: rigid + Qwen AI fallback) |
 | GET | `/api/tax/tradebook` | List tradebook entries |
 
-### Income Tracking (NEW)
+### Tax-Loss Harvesting
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/tax-harvest/opportunities` | List active harvest opportunities |
+| POST | `/api/tax-harvest/scan` | Scan portfolio for harvestable losses (>₹500) |
+| PUT | `/api/tax-harvest/opportunities/{id}/dismiss` | Dismiss opportunity |
+| GET | `/api/tax-harvest/opportunities/{id}/what-if` | What-if analysis (proceeds, loss, saving) |
+
+### Document Upload
+| Method | Path | Description |
+|--------|------|-------------|
+| POST | `/api/documents/upload` | Upload Form 16/26AS/AIS/CAS/Salary Slip (AI-parsed) |
+| GET | `/api/documents` | List uploaded documents |
+
+### Performance
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/performance/portfolio/{id}?period=1Y` | Enriched metrics (winners/losers/sector/tax/completeness) |
+| POST | `/api/performance/portfolio/{id}/snapshot` | Trigger performance snapshot |
+
+### Income Tracking
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/income` | List income entries |
 | POST | `/api/income` | Add income entry |
 | DELETE | `/api/income/{id}` | Delete income entry |
 
-### Approval Workflow (NEW)
+### Mutual Funds
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/mutual-funds` | List MF holdings |
+
+### Goals & SIP
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/goals` | List financial goals |
+| POST | `/api/goals` | Create goal |
+| PUT | `/api/goals/{id}` | Update goal |
+| DELETE | `/api/goals/{id}` | Delete goal |
+
+### Net Worth
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/networth` | Get multi-asset net worth |
+| POST | `/api/networth/assets` | Add asset |
+| PUT | `/api/networth/assets/{id}` | Update asset |
+| DELETE | `/api/networth/assets/{id}` | Delete asset |
+
+### Watchlist & Alerts
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/watchlists` | List watchlists |
+| POST | `/api/watchlists` | Create watchlist |
+| POST | `/api/watchlists/{id}/items` | Add item |
+| DELETE | `/api/watchlists/{id}/items/{itemId}` | Remove item |
+
+### Notifications
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/notifications` | List notifications |
+| PUT | `/api/notifications/{id}/read` | Mark as read |
+
+### Preferences
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/preferences` | Get user preferences + risk profile |
+| PUT | `/api/preferences` | Update preferences |
+
+### Daily Briefings
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/briefings/latest` | Get latest daily briefing |
+| POST | `/api/briefings/generate` | Trigger briefing generation |
+
+### Approval Workflow
 | Method | Path | Description |
 |--------|------|-------------|
 | GET | `/api/approvals` | List approval requests |
@@ -545,13 +651,20 @@ users ─────────┬─── portfolios ──────┬�
 | POST | `/api/approvals/{id}/approve` | Approve request |
 | POST | `/api/approvals/{id}/reject` | Reject request |
 
-### Zerodha Kite
+### Multi-Broker Auth
 | Method | Path | Description |
 |--------|------|-------------|
-| GET | `/api/kite/login` | Redirect to Zerodha OAuth |
-| GET | `/api/kite/callback` | OAuth callback |
-| POST | `/api/kite/connect` | Store access token |
-| GET | `/api/kite/status` | Connection status |
+| GET | `/api/broker/auth-url/{broker}` | Get OAuth URL for any broker |
+| POST | `/api/broker/callback/{broker}` | Handle broker OAuth callback |
+| GET | `/api/broker/connections` | List connected brokers |
+| DELETE | `/api/broker/connections/{id}` | Disconnect broker |
+| POST | `/api/broker/sync/{broker}` | Sync holdings from broker |
+
+### Zerodha Kite (Legacy)
+| Method | Path | Description |
+|--------|------|-------------|
+| GET | `/api/kite/auth-url` | Get Kite OAuth URL |
+| POST | `/api/kite/callback` | OAuth callback |
 | POST | `/api/kite/sync` | Sync holdings |
 
 ### WebSocket & Docs
@@ -567,19 +680,30 @@ users ─────────┬─── portfolios ──────┬�
 
 | Route | Page | Features |
 |-------|------|----------|
-| `/login` | Login/Register | Email + password auth |
-| `/dashboard` | Dashboard | Holdings table, metrics bar, sector chart, CSV import, Kite sync |
+| `/login` | Login/Register | Email + password auth, **Google OAuth sign-in** |
+| `/dashboard` | Dashboard | Holdings table, metrics bar, sector chart, **Import Data button** (→ ImportGuide modal), Kite sync |
 | `/holdings` | Holdings | Stock list, click through to analysis |
-| `/performance` | **Performance** | XIRR cards, portfolio vs benchmark chart, period selector |
+| `/performance` | Performance | **8 metric cards** (returns, day change, holdings, top sector, winners, losers, tax, dividends), data completeness bar with upload CTAs, portfolio value chart, sector chart |
 | `/stocks/:symbol` | Stock Analysis | Price, SMA50/200, RSI, MACD, AI insights |
 | `/transactions` | Transactions | Buy/sell execution, history |
-| `/ai` | AI Assessment | Chat (SSE), Analysis (JSON), Rebalance, History, Transparency |
-| `/goals` | **Goals** | Goal cards, progress bars, SIP calculator, 3-scenario projections |
-| `/networth` | **Net Worth** | Multi-asset total, donut chart, asset CRUD, liquidity breakdown |
-| `/watchlist` | **Watchlist** | Stocks with target prices, alerts, live price comparison |
-| `/tax` | Tax Dashboard | FY selector, LTCG/STCG cards, capital gains table, income breakdown |
-| `/income` | Income & Trades | Income CRUD (7 types), Tradebook CSV upload, tabbed UI |
-| `/settings` | **Settings** | Risk questionnaire (10-step), preferences, notification toggles |
+| `/ai` | AI Assessment | **Chat with session sidebar** (new chat, switch session, finalize), fullscreen toggle, structured JSON responses (cards/tables/badges), streaming markdown, **3 tabs**: Chat, Analysis, Rebalance |
+| `/goals` | Goals | Goal cards, progress bars, SIP calculator, 3-scenario projections |
+| `/networth` | Net Worth | Multi-asset total, donut chart, asset CRUD, liquidity breakdown |
+| `/watchlist` | Watchlist | Stocks with target prices, alerts, live price comparison |
+| `/tax` | Tax Dashboard | **4 tabs**: Summary (LTCG/STCG cards + capital gains table), **Harvesting** (scan + what-if), **Opportunities** (suggestions + **regime comparison** Old vs New), **AI Advisor** (pre-built tax questions → Claude) |
+| `/income` | Income & Trades | Income CRUD (7 types), Tradebook CSV upload (hybrid parser), tabbed UI |
+| `/settings` | Settings | Risk questionnaire (10-step), preferences, notification toggles |
+
+### Key UI Components
+
+| Component | Location | Purpose |
+|-----------|----------|---------|
+| **ImportGuide** | `components/import/ImportGuide.tsx` | Central modal with 3 tabs (Holdings, Tradebook, Tax Documents), 14 import sources, drag-and-drop upload |
+| **StructuredResponse** | `components/ai/StructuredResponse.tsx` | Renders COMPLEX query JSON → SummaryCard, tables, badges, warnings, disclaimer |
+| **MarkdownMessage** | `components/ai/MarkdownMessage.tsx` | Streams SIMPLE query responses as markdown |
+| **Collapsible Sidebar** | `components/layout/Sidebar.tsx` | Full (240px) ↔ icons-only (64px), auto-collapses on AI page, persisted in localStorage |
+| **DataCompleteness** | `components/performance/DataCompleteness.tsx` | Progress bar showing data quality with upload CTAs |
+| **TaxHarvestPanel** | `components/tax/TaxHarvestPanel.tsx` | Scan + harvest opportunity cards + what-if analysis |
 
 ---
 
@@ -625,6 +749,7 @@ users ─────────┬─── portfolios ──────┬�
 Host Machine (macOS)
 ├── MySQL 8 (:3306)           ← native
 ├── PostgreSQL 15 (:5432)     ← native
+├── Ollama (nomic-embed-text) ← native, for embeddings (FREE)
 └── Docker Desktop
     └── platform_network (bridge)
         ├── redis (:6379)
@@ -635,7 +760,18 @@ Host Machine (macOS)
         ├── agent-farm (:8082)
         ├── mcp-portfolio-tracker (:3004)
         ├── mcp-web-search (:3001)
-        └── admin-nexus (:5174)
+        ├── knowledge-store (:3010)
+        ├── admin-nexus (:5174)
+        ├── markandey-in (:5175)
+        └── cloudflared (tunnel → rakha.xyz)
+```
+
+### Cloudflare Tunnel (Public Access)
+```
+cloudflared tunnel run rakha
+  ├── https://rakha.xyz     → nginx (:3000)  → all services
+  ├── https://api.rakha.xyz → :8080          → API direct
+  └── https://admin.rakha.xyz → :5174        → Admin Nexus direct
 ```
 
 ### Production (AWS)
@@ -656,7 +792,9 @@ S3                 → Frontend assets, DB backups
 | Backend | Java 23, Spring Boot 3.2, Maven, JPA/Hibernate, MySQL 8 |
 | Frontend | React 19, TypeScript 5.9, Vite 8, TailwindCSS 4, Zustand 5, React Query 5 |
 | Infrastructure | Node.js 18, Fastify v4, Drizzle ORM, PostgreSQL 15 |
-| AI | Anthropic Claude Sonnet 4.6, Vercel AI SDK v6 |
+| AI | Anthropic Claude Sonnet 4.6 (COMPLEX), Qwen 2.5 Coder 14B via Ollama (SIMPLE/FREE), Vercel AI SDK v6 |
+| RAG | pgvector (cosine similarity), Ollama nomic-embed-text (768-dim, FREE) |
+| Personal Site | Next.js 15, Framer Motion, Tailwind 4 |
 | MCP | @modelcontextprotocol/sdk v1.29, StreamableHTTP transport |
 | Queue | BullMQ + Redis 7 |
 | Broker | Zerodha Kite Connect (OAuth 2.0) |
@@ -688,13 +826,16 @@ S3                 → Frontend assets, DB backups
 |----------|----------|---------|-------------|
 | `DB_HOST` | Yes | `localhost` | MySQL host |
 | `DB_PORT` | Yes | `3306` | MySQL port |
-| `DB_NAME` | Yes | `portfolio` | Database name |
+| `DB_NAME` | Yes | `portfolio_tracker` | Database name |
 | `DB_USER` | Yes | `root` | MySQL user |
 | `DB_PASSWORD` | Yes | — | MySQL password |
 | `JWT_SECRET` | Yes | — | JWT signing key (min 32 chars) |
 | `ANTHROPIC_API_KEY` | Yes | — | Claude API key |
+| `ANTHROPIC_MODEL` | No | `claude-sonnet-4-6` | Claude model |
 | `AGENT_FARM_URL` | No | `http://localhost:8082` | Agent Farm URL |
 | `AGENT_FARM_API_KEY` | No | `admin-secret` | Agent Farm auth |
+| `KNOWLEDGE_STORE_URL` | No | `http://localhost:3010` | Knowledge Store service URL |
+| `GOOGLE_CLIENT_ID` | No | — | Google OAuth client ID |
 | `KITE_API_KEY` | No | — | Zerodha API key |
 | `KITE_API_SECRET` | No | — | Zerodha API secret |
 | `FRONTEND_URL` | Yes | `http://localhost:5173` | CORS origin |
